@@ -6,6 +6,6 @@
     <field name="received_amount"/>
     <field name="state"/>
     <field name="shop"/>
-    <field name="expiration_date"/>
+    <field name="expiration_date_date"/>
     <field name="payer_name"/>
 </tree>

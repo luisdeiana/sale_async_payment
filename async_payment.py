@@ -77,6 +77,9 @@ class AsyncPayment(Workflow, ModelSQL, ModelView):
     expiration_date = fields.DateTime(
         'Fecha de vencimiento',
         states={'readonly': Eval('state') != 'pending'})
+    expiration_date_date = fields.Function(
+        fields.Date('Vence'),
+        'get_expiration_date_date')
 
     # Datos del pago recibido (se completan al sugerir/confirmar)
     received_amount = fields.Numeric(
@@ -181,6 +184,11 @@ class AsyncPayment(Workflow, ModelSQL, ModelView):
     @staticmethod
     def default_match_criteria():
         return ''
+
+    def get_expiration_date_date(self, name):
+        if self.expiration_date:
+            return self.expiration_date.date()
+        return None
 
     def get_rec_name(self, name):
         sale_name = self.sale.rec_name if self.sale else ''
