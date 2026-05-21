@@ -232,5 +232,49 @@ class TestWizardAsyncRegister(unittest.TestCase):
         self.assertEqual(next_state, 'async_confirm')
 
 
+class TestAsyncConfirmDiff(unittest.TestCase):
+    """Tests del paso 7: cómputo de received_amount y diferencia."""
+
+    def test_confirm_exact_received_equals_amount(self):
+        """received_amount == amount → diff = 0."""
+        from sale_async_payment.async_payment import AsyncPayment
+        ap = MagicMock()
+        ap.amount = Decimal('1000')
+        ap.received_amount = Decimal('1000')
+        received, diff = AsyncPayment._compute_received_and_diff(ap)
+        self.assertEqual(received, Decimal('1000'))
+        self.assertEqual(diff, Decimal('0'))
+
+    def test_confirm_overpayment_positive_diff(self):
+        """received_amount > amount → diff positivo (sobrante)."""
+        from sale_async_payment.async_payment import AsyncPayment
+        ap = MagicMock()
+        ap.amount = Decimal('1000')
+        ap.received_amount = Decimal('1050')
+        received, diff = AsyncPayment._compute_received_and_diff(ap)
+        self.assertEqual(received, Decimal('1050'))
+        self.assertEqual(diff, Decimal('50'))
+
+    def test_confirm_underpayment_negative_diff(self):
+        """received_amount < amount → diff negativo (faltante)."""
+        from sale_async_payment.async_payment import AsyncPayment
+        ap = MagicMock()
+        ap.amount = Decimal('1000')
+        ap.received_amount = Decimal('970')
+        received, diff = AsyncPayment._compute_received_and_diff(ap)
+        self.assertEqual(received, Decimal('970'))
+        self.assertEqual(diff, Decimal('-30'))
+
+    def test_confirm_received_none_falls_back_to_amount(self):
+        """Si received_amount es None, asume exacto (diff = 0)."""
+        from sale_async_payment.async_payment import AsyncPayment
+        ap = MagicMock()
+        ap.amount = Decimal('500')
+        ap.received_amount = None
+        received, diff = AsyncPayment._compute_received_and_diff(ap)
+        self.assertEqual(received, Decimal('500'))
+        self.assertEqual(diff, Decimal('0'))
+
+
 if __name__ == '__main__':
     unittest.main()

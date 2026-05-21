@@ -1,7 +1,25 @@
+import datetime
+from decimal import Decimal
+
+from trytond.exceptions import UserError, UserWarning
 from trytond.model import (
     DeactivableMixin, ModelSQL, ModelView, Workflow, fields)
 from trytond.pool import Pool
 from trytond.pyson import Eval, If
+from trytond.transaction import Transaction
+
+
+def _user_is_payment_supervisor():
+    pool = Pool()
+    User = pool.get('res.user')
+    ModelData = pool.get('ir.model.data')
+    user = User(Transaction().user)
+    try:
+        group_id = ModelData.get_id(
+            'account_payment_methods', 'group_payment_supervisor')
+    except Exception:
+        return False
+    return any(g.id == group_id for g in user.groups)
 
 
 PAYMENT_METHODS = [
@@ -124,7 +142,25 @@ class AsyncPayment(Workflow, ModelSQL, ModelView):
             ('suggested', 'cancelled'),
             ('expired', 'pending'),
         }
-        cls._buttons = {}
+        cls._buttons.update({
+            'confirm': {
+                'invisible': ~Eval('state').in_(['pending', 'suggested']),
+                'depends': ['state'],
+            },
+            'cancel': {
+                'invisible': Eval('state').in_(
+                    ['cancelled', 'expired', 'confirmed']),
+                'depends': ['state'],
+            },
+            'reject_suggestion': {
+                'invisible': Eval('state') != 'suggested',
+                'depends': ['state'],
+            },
+            'reactivate': {
+                'invisible': Eval('state') != 'expired',
+                'depends': ['state'],
+            },
+        })
 
     @staticmethod
     def default_state():
@@ -138,3 +174,145 @@ class AsyncPayment(Workflow, ModelSQL, ModelView):
         sale_name = self.sale.rec_name if self.sale else ''
         method = dict(PAYMENT_METHODS).get(self.payment_method, '')
         return f'{sale_name} — {method}'
+
+    # ── Helpers testables ───────────────────────────────────────────────
+
+    @classmethod
+    def _compute_received_and_diff(cls, async_payment):
+        # Si no se completó received_amount, asumir que entró el monto
+        # exacto registrado en el async. Retorna (received, diff) donde
+        # diff = received - amount (positivo=sobrante, negativo=faltante).
+        amount = async_payment.amount or Decimal('0')
+        received = async_payment.received_amount
+        if received is None:
+            received = amount
+        diff = received - amount
+        return received, diff
+
+    # ── Transiciones (botones) ──────────────────────────────────────────
+
+    @classmethod
+    @ModelView.button
+    @Workflow.transition('confirmed')
+    def confirm(cls, async_payments):
+        pool = Pool()
+        StatementLine = pool.get('account.statement.line')
+        Journal = pool.get('account.statement.journal')
+        Date = pool.get('ir.date')
+        Warning_ = pool.get('res.user.warning')
+        Sale = pool.get('sale.sale')
+
+        today = Date.today()
+        now = datetime.datetime.now()
+        user_id = Transaction().user
+
+        sales_to_check = set()
+
+        for ap in async_payments:
+            if ap.state not in ('pending', 'suggested'):
+                raise UserError(
+                    'Solo cobros en estado Pendiente o Sugerido pueden '
+                    'confirmarse. Estado actual: ' + ap.state)
+
+            received, diff = cls._compute_received_and_diff(ap)
+
+            if diff != 0:
+                key = 'sale_async_payment.diff_%d' % ap.id
+                if Warning_.check(key):
+                    raise UserWarning(
+                        key,
+                        f'Recibido ${received}, esperado ${ap.amount}, '
+                        f'diferencia ${diff}. ¿Confirmar igualmente '
+                        f'la línea con la diferencia registrada?')
+
+            stmt_id = ap.journal.get_or_create_statement_for_date(today)
+            party = ap.sale.party
+            with Transaction().set_context(date=today):
+                account = party.account_receivable_used
+            if not account:
+                raise UserError(
+                    'El cliente %s no tiene cuenta a cobrar configurada.'
+                    % party.name)
+
+            description = (
+                ap.sale.number or ap.sale.reference or str(ap.sale.id))
+            line = StatementLine(
+                statement=stmt_id,
+                date=today,
+                amount=received,
+                party=party.id,
+                account=account.id,
+                description=description,
+                sale=ap.sale.id,
+                unmatched_difference=diff,
+            )
+            line.save()
+
+            ap.statement_line = line
+            ap.received_amount = received
+            ap.confirmed_by = user_id
+            ap.confirmed_date = now
+            ap.save()
+
+            sales_to_check.add(ap.sale.id)
+
+        # Trigger workflow_to_end por cada sale donde el total quedó
+        # cubierto exactamente por las statement.line.
+        if sales_to_check:
+            sales = Sale.browse(list(sales_to_check))
+            to_end = [
+                s for s in sales
+                if s.total_amount
+                and s.total_amount == s.paid_amount
+                and s.state in ('draft', 'quotation', 'confirmed',
+                                 'processing')]
+            if to_end:
+                Sale.workflow_to_end(to_end)
+
+    @classmethod
+    @ModelView.button
+    @Workflow.transition('cancelled')
+    def cancel(cls, async_payments):
+        for ap in async_payments:
+            if ap.state == 'confirmed':
+                # Cancelar un confirmado implica revertir la statement.line
+                # y los efectos contables — queda fuera de scope del paso 7.
+                # Cuando se implemente, exigirá rol Supervisor (group_payment_supervisor).
+                raise UserError(
+                    'No se puede cancelar un cobro Confirmado desde '
+                    'esta vista. Revertir la línea de extracto '
+                    'manualmente y crear un nuevo cobro asíncrono.')
+            if ap.state in ('cancelled', 'expired'):
+                raise UserError(
+                    'El cobro ya está en estado ' + ap.state)
+
+    @classmethod
+    @ModelView.button
+    @Workflow.transition('pending')
+    def reject_suggestion(cls, async_payments):
+        for ap in async_payments:
+            if ap.state != 'suggested':
+                raise UserError(
+                    'Solo cobros en estado Sugerido pueden rechazarse.')
+        cls.write(list(async_payments), {
+            'mp_payment_id': None,
+            'bank_reference': None,
+            'payer_name': None,
+            'payer_cuit': None,
+            'received_amount': None,
+            'match_criteria': '',
+            'matched_date': None,
+        })
+
+    @classmethod
+    @ModelView.button
+    @Workflow.transition('pending')
+    def reactivate(cls, async_payments):
+        if not _user_is_payment_supervisor():
+            raise UserError(
+                'Reactivar un cobro vencido requiere el rol '
+                '"Supervisor de cobros".')
+        for ap in async_payments:
+            if ap.state != 'expired':
+                raise UserError(
+                    'Solo cobros Vencidos pueden reactivarse.')

@@ -41,4 +41,12 @@
     <separator string="Notas" colspan="4" id="sep_notes"/>
     <label name="notes"/>
     <field name="notes" colspan="3"/>
+    <group col="4" colspan="4" id="grp_buttons">
+        <button name="confirm" string="Confirmar" icon="tryton-ok"/>
+        <button name="reject_suggestion"
+            string="Rechazar sugerencia" icon="tryton-refresh"/>
+        <button name="cancel" string="Cancelar" icon="tryton-cancel"/>
+        <button name="reactivate"
+            string="Reactivar" icon="tryton-launch"/>
+    </group>
 </form>
