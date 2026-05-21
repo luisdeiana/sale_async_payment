@@ -770,5 +770,196 @@ class TestExpireCron(unittest.TestCase):
         write_mock.assert_not_called()
 
 
+class TestIntegralFlows(unittest.TestCase):
+    """Tests integrales del paso 13: flows que combinan varios componentes."""
+
+    def test_trigger_workflow_to_end_when_sale_fully_paid(self):
+        """_maybe_trigger_workflow_to_end llama Sale.workflow_to_end cuando
+        la venta queda totalmente cobrada (total == paid) y está en un
+        estado avanzable."""
+        from sale_async_payment.async_payment import AsyncPayment
+
+        refreshed_sale = MagicMock(
+            total_amount=Decimal('1000'),
+            paid_amount=Decimal('1000'),
+            state='processing')
+
+        sale_cls = MagicMock()
+        sale_cls.browse.return_value = [refreshed_sale]
+        pool_mock = MagicMock()
+        pool_mock.get.return_value = sale_cls
+
+        with patch(
+                'sale_async_payment.async_payment.Pool',
+                return_value=pool_mock):
+            AsyncPayment._maybe_trigger_workflow_to_end({99})
+
+        sale_cls.workflow_to_end.assert_called_once_with(
+            [refreshed_sale])
+
+    def test_no_workflow_trigger_when_residual_remains(self):
+        """No dispara workflow_to_end cuando sale.paid_amount < total."""
+        from sale_async_payment.async_payment import AsyncPayment
+
+        partial = MagicMock(
+            total_amount=Decimal('1000'),
+            paid_amount=Decimal('400'),
+            state='processing')
+
+        sale_cls = MagicMock()
+        sale_cls.browse.return_value = [partial]
+        pool_mock = MagicMock()
+        pool_mock.get.return_value = sale_cls
+
+        with patch(
+                'sale_async_payment.async_payment.Pool',
+                return_value=pool_mock):
+            AsyncPayment._maybe_trigger_workflow_to_end({99})
+
+        sale_cls.workflow_to_end.assert_not_called()
+
+    def test_no_workflow_trigger_when_sale_already_done(self):
+        """No dispara workflow_to_end si la sale ya está en done/cancelled
+        (estados terminales fuera del set de avance)."""
+        from sale_async_payment.async_payment import AsyncPayment
+
+        done_sale = MagicMock(
+            total_amount=Decimal('1000'),
+            paid_amount=Decimal('1000'),
+            state='done')
+
+        sale_cls = MagicMock()
+        sale_cls.browse.return_value = [done_sale]
+        pool_mock = MagicMock()
+        pool_mock.get.return_value = sale_cls
+
+        with patch(
+                'sale_async_payment.async_payment.Pool',
+                return_value=pool_mock):
+            AsyncPayment._maybe_trigger_workflow_to_end({99})
+
+        sale_cls.workflow_to_end.assert_not_called()
+
+    def test_link_wizard_records_unmatched_difference(self):
+        """transition_link_ del wizard de huérfanos setea unmatched_difference
+        en la statement.line cuando recibido difiere del total de la venta."""
+        from sale_async_payment.unassigned_payment import (
+            LinkUnassignedPayment, UnassignedPayment)
+
+        # Unassigned: pago de $1050. La venta vale $1000 → diff +50.
+        line = MagicMock(id=300, sale=None)
+        unassigned = MagicMock(
+            id=1, source='mp', source_id=7,
+            amount=Decimal('1050'), reference='MP-XYZ',
+            payer_name='comprador@mail.com', payer_cuit='',
+            statement_line=line)
+        sale = MagicMock(id=99, total_amount=Decimal('1000'))
+
+        async_payment_cls = MagicMock()
+        async_payment_cls.create.return_value = [MagicMock(id=11)]
+        stmt_line_cls = MagicMock()
+        stmt_line_cls.return_value = line
+
+        def pool_get(model):
+            return {
+                'sale.unassigned_payment': UnassignedPayment,
+                'sale.async_payment': async_payment_cls,
+                'account.statement.line': stmt_line_cls,
+            }[model]
+        pool_mock = MagicMock()
+        pool_mock.get.side_effect = pool_get
+
+        wizard = MagicMock(spec=LinkUnassignedPayment)
+        wizard.record = unassigned
+        wizard.start = MagicMock(sale=sale)
+
+        vals_stub = {
+            'sale': 99, 'amount': Decimal('1050'),
+            'journal': 5, 'state': 'confirmed',
+            'payment_method': 'mp_link',
+        }
+
+        with patch(
+                'sale_async_payment.unassigned_payment.Pool',
+                return_value=pool_mock), \
+             patch.object(
+                UnassignedPayment, '_build_async_vals',
+                return_value=vals_stub), \
+             patch.object(
+                UnassignedPayment, '_set_source_sale') as set_sale_mock:
+            LinkUnassignedPayment.transition_link_(wizard)
+
+        # Async creado con los vals
+        async_payment_cls.create.assert_called_once_with([vals_stub])
+        # _set_source_sale invocado con source/source_id/sale.id
+        set_sale_mock.assert_called_once_with('mp', 7, 99)
+        # Statement.line: write con sale=99 Y unmatched_difference=50
+        stmt_line_cls.write.assert_called_once()
+        call_args = stmt_line_cls.write.call_args[0]
+        self.assertEqual(call_args[0], [line])
+        vals = call_args[1]
+        self.assertEqual(vals.get('sale'), 99)
+        self.assertEqual(vals.get('unmatched_difference'), Decimal('50'))
+
+    def test_link_wizard_no_diff_when_amounts_match(self):
+        """Si el monto recibido == total de la venta, no se setea
+        unmatched_difference en la línea."""
+        from sale_async_payment.unassigned_payment import (
+            LinkUnassignedPayment, UnassignedPayment)
+
+        line = MagicMock(id=300, sale=None)
+        unassigned = MagicMock(
+            id=1, source='qr', source_id=15,
+            amount=Decimal('1000'), reference='REF-1',
+            payer_name='Juan', payer_cuit='20-12345678-9',
+            statement_line=line)
+        sale = MagicMock(id=99, total_amount=Decimal('1000'))
+
+        async_payment_cls = MagicMock()
+        async_payment_cls.create.return_value = [MagicMock(id=11)]
+        stmt_line_cls = MagicMock()
+        stmt_line_cls.return_value = line  # StatementLine(id) → line
+
+        def pool_get(model):
+            return {
+                'sale.unassigned_payment': UnassignedPayment,
+                'sale.async_payment': async_payment_cls,
+                'account.statement.line': stmt_line_cls,
+            }[model]
+        pool_mock = MagicMock()
+        pool_mock.get.side_effect = pool_get
+
+        wizard = MagicMock(spec=LinkUnassignedPayment)
+        wizard.record = unassigned
+        wizard.start = MagicMock(sale=sale)
+
+        with patch(
+                'sale_async_payment.unassigned_payment.Pool',
+                return_value=pool_mock), \
+             patch.object(
+                UnassignedPayment, '_build_async_vals',
+                return_value={'sale': 99, 'journal': 5}), \
+             patch.object(UnassignedPayment, '_set_source_sale'):
+            LinkUnassignedPayment.transition_link_(wizard)
+
+        stmt_line_cls.write.assert_called_once()
+        vals = stmt_line_cls.write.call_args[0][1]
+        self.assertEqual(vals.get('sale'), 99)
+        self.assertNotIn('unmatched_difference', vals)
+
+    def test_effective_residual_zero_blocks_extra_sync_payment(self):
+        """Cuando paid + async_pending iguala el total, effective_residual
+        queda en 0 → debería bloquear cobro sync adicional. Verificamos el
+        invariante directo sobre get_effective_residual_amount."""
+        from sale_async_payment.sale import Sale
+        sale = MagicMock(id=1)
+        sale.total_amount = Decimal('1000')
+        sale.paid_amount = Decimal('300')
+        sale.async_pending_amount = Decimal('700')
+        residual = Sale.get_effective_residual_amount(
+            [sale], 'effective_residual_amount')
+        self.assertEqual(residual[1], Decimal('0'))
+
+
 if __name__ == '__main__':
     unittest.main()

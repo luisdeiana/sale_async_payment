@@ -460,16 +460,26 @@ class AsyncPayment(Workflow, ModelSQL, ModelView):
 
         # Trigger workflow_to_end por cada sale donde el total quedó
         # cubierto exactamente por las statement.line.
-        if sales_to_check:
-            sales = Sale.browse(list(sales_to_check))
-            to_end = [
-                s for s in sales
-                if s.total_amount
-                and s.total_amount == s.paid_amount
-                and s.state in ('draft', 'quotation', 'confirmed',
-                                 'processing')]
-            if to_end:
-                Sale.workflow_to_end(to_end)
+        cls._maybe_trigger_workflow_to_end(sales_to_check)
+
+    @classmethod
+    def _maybe_trigger_workflow_to_end(cls, sale_ids):
+        # Helper testable. Llama Sale.workflow_to_end sobre las ventas
+        # que cumplen total_amount == paid_amount Y estado en draft/
+        # quotation/confirmed/processing.
+        if not sale_ids:
+            return
+        pool = Pool()
+        Sale = pool.get('sale.sale')
+        sales = Sale.browse(list(sale_ids))
+        to_end = [
+            s for s in sales
+            if s.total_amount
+            and s.total_amount == s.paid_amount
+            and s.state in ('draft', 'quotation', 'confirmed',
+                             'processing')]
+        if to_end:
+            Sale.workflow_to_end(to_end)
 
     @classmethod
     @ModelView.button

@@ -150,13 +150,20 @@ class UnassignedPayment(ModelSQL, ModelView):
         return vals
 
     @classmethod
-    def _get_source_record(cls, source, source_id):
-        pool = Pool()
-        model = (
-            'account.payment.mp.transaction' if source == 'mp'
+    def _source_model_name(cls, source):
+        return ('account.payment.mp.transaction' if source == 'mp'
             else 'account.payment.qr.detection')
-        Cls = pool.get(model)
+
+    @classmethod
+    def _get_source_record(cls, source, source_id):
+        Cls = Pool().get(cls._source_model_name(source))
         return Cls(source_id)
+
+    @classmethod
+    def _set_source_sale(cls, source, source_id, sale_id):
+        # Helper testable: vincula sale en el record origen (MP o QR).
+        Cls = Pool().get(cls._source_model_name(source))
+        Cls.write([Cls(source_id)], {'sale': sale_id})
 
     # ── Botón ───────────────────────────────────────────────────────────
 
@@ -227,10 +234,9 @@ class LinkUnassignedPayment(Wizard):
 
         async_payment = AsyncPayment.create([vals])[0]
 
-        # Vincular sale en el registro origen
-        source_record = UnassignedPayment._get_source_record(
-            unassigned.source, unassigned.source_id)
-        type(source_record).write([source_record], {'sale': sale.id})
+        # Vincular sale en el registro origen (mp.transaction o qr.detection)
+        UnassignedPayment._set_source_sale(
+            unassigned.source, unassigned.source_id, sale.id)
 
         # Vincular sale en la statement.line y registrar diferencia
         if unassigned.statement_line:
