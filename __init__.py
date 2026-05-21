@@ -5,6 +5,7 @@ from . import configuration
 from . import mp_bridge
 from . import qr_bridge
 from . import sale
+from . import user
 from . import wizard
 
 
@@ -15,6 +16,7 @@ def register():
         configuration.AsyncPaymentUserFilter,
         configuration.AsyncPaymentUserFilterShop,
         sale.Sale,
+        user.User,
         wizard.SalePaymentForm,
         wizard.AsyncMethodSelectForm,
         wizard.AsyncConfirmForm,

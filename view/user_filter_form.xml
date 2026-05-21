@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<form col="2">
+    <label name="user"/>
+    <field name="user"/>
+    <label name="only_own"/>
+    <field name="only_own"/>
+    <separator string="Sucursales visibles" id="sep_shops" colspan="2"/>
+    <field name="shops" colspan="2"/>
+</form>

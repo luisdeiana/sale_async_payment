@@ -31,6 +31,50 @@
             <field name="act_window" ref="act_async_payment"/>
         </record>
 
+        <!-- Filtros predefinidos en la vista lista -->
+        <record model="ir.action.act_window.domain"
+            id="act_async_payment_domain_pending">
+            <field name="name">Pendientes</field>
+            <field name="sequence" eval="10"/>
+            <field name="domain"
+                eval="[('state', '=', 'pending')]" pyson="1"/>
+            <field name="count" eval="True"/>
+            <field name="act_window" ref="act_async_payment"/>
+        </record>
+        <record model="ir.action.act_window.domain"
+            id="act_async_payment_domain_suggested">
+            <field name="name">Sugeridos</field>
+            <field name="sequence" eval="20"/>
+            <field name="domain"
+                eval="[('state', '=', 'suggested')]" pyson="1"/>
+            <field name="count" eval="True"/>
+            <field name="act_window" ref="act_async_payment"/>
+        </record>
+        <record model="ir.action.act_window.domain"
+            id="act_async_payment_domain_expired">
+            <field name="name">Vencidos</field>
+            <field name="sequence" eval="30"/>
+            <field name="domain"
+                eval="[('state', '=', 'expired')]" pyson="1"/>
+            <field name="count" eval="True"/>
+            <field name="act_window" ref="act_async_payment"/>
+        </record>
+        <record model="ir.action.act_window.domain"
+            id="act_async_payment_domain_confirmed">
+            <field name="name">Confirmados</field>
+            <field name="sequence" eval="40"/>
+            <field name="domain"
+                eval="[('state', '=', 'confirmed')]" pyson="1"/>
+            <field name="act_window" ref="act_async_payment"/>
+        </record>
+        <record model="ir.action.act_window.domain"
+            id="act_async_payment_domain_all">
+            <field name="name">Todos</field>
+            <field name="sequence" eval="50"/>
+            <field name="domain"/>
+            <field name="act_window" ref="act_async_payment"/>
+        </record>
+
         <!-- Menú: Cobros → Cobros pendientes -->
         <menuitem
             id="menu_async_payment"

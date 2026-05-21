@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <tryton>
     <data>
-        <!-- Vista form de configuración -->
+        <!-- Vista form de configuración Singleton -->
         <record model="ir.ui.view" id="async_payment_config_view_form">
             <field name="model">sale.async_payment.config</field>
             <field name="type">form</field>
@@ -19,6 +19,34 @@
             <field name="sequence" eval="10"/>
             <field name="view" ref="async_payment_config_view_form"/>
             <field name="act_window" ref="act_async_payment_config"/>
+        </record>
+
+        <!-- Menú: Configuración → Cobros asíncronos -->
+        <menuitem
+            id="menu_async_payment_config"
+            name="Cobros asíncronos"
+            parent="account.menu_account_configuration"
+            action="act_async_payment_config"
+            icon="tryton-settings"
+            sequence="100"/>
+
+        <!-- Vistas del filtro por usuario -->
+        <record model="ir.ui.view" id="user_filter_view_form">
+            <field name="model">sale.async_payment.user_filter</field>
+            <field name="type">form</field>
+            <field name="name">user_filter_form</field>
+        </record>
+        <record model="ir.ui.view" id="user_filter_view_tree">
+            <field name="model">sale.async_payment.user_filter</field>
+            <field name="type">tree</field>
+            <field name="name">user_filter_tree</field>
+        </record>
+
+        <!-- Vista heredada de res.user con tab "Cobros asíncronos" -->
+        <record model="ir.ui.view" id="user_view_form_async">
+            <field name="model">res.user</field>
+            <field name="inherit" ref="res.user_view_form"/>
+            <field name="name">user_form_async</field>
         </record>
     </data>
 </tryton>

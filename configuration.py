@@ -1,4 +1,4 @@
-from trytond.model import ModelSingleton, ModelSQL, ModelView, fields
+from trytond.model import ModelSingleton, ModelSQL, ModelView, Unique, fields
 
 
 class AsyncPaymentConfig(ModelSingleton, ModelSQL, ModelView):
@@ -49,6 +49,18 @@ class AsyncPaymentUserFilter(ModelSQL, ModelView):
     only_own = fields.Boolean(
         'Solo mis cobros',
         help='Si está activo, solo muestra cobros registrados por este usuario.')
+
+    @classmethod
+    def __setup__(cls):
+        super().__setup__()
+        t = cls.__table__()
+        cls._sql_constraints = [
+            ('user_unique', Unique(t, t.user),
+                'Ya existe un filtro para este usuario.'),
+        ]
+
+    def get_rec_name(self, name):
+        return self.user.rec_name if self.user else ''
 
 
 class AsyncPaymentUserFilterShop(ModelSQL):

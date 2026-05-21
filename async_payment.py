@@ -181,6 +181,43 @@ class AsyncPayment(Workflow, ModelSQL, ModelView):
         method = dict(PAYMENT_METHODS).get(self.payment_method, '')
         return f'{sale_name} — {method}'
 
+    # ── Domain dinámico por user_filter (paso 9) ────────────────────────
+
+    @classmethod
+    def _get_user_filter_domain(cls, user_filter, is_supervisor, user_id):
+        # Retorna lista de tuplas de domain (AND) a aplicar al search
+        # según el user_filter del usuario actual.
+        # - Root (user_id == 0) y supervisor ven todo.
+        # - Sin filter configurado: ven todo.
+        # - Con shops: limita a esas sucursales.
+        # - only_own: limita a registros creados por el usuario.
+        if user_id == 0 or is_supervisor or user_filter is None:
+            return []
+        extra = []
+        if user_filter.shops:
+            extra.append(('shop', 'in', [s.id for s in user_filter.shops]))
+        if user_filter.only_own:
+            extra.append(('create_uid', '=', user_id))
+        return extra
+
+    @classmethod
+    def search(cls, domain, *args, **kwargs):
+        pool = Pool()
+        UserFilter = pool.get('sale.async_payment.user_filter')
+        user_id = Transaction().user
+        is_supervisor = _user_is_payment_supervisor()
+        user_filter = None
+        if user_id != 0 and not is_supervisor:
+            filters = UserFilter.search(
+                [('user', '=', user_id)], limit=1)
+            if filters:
+                user_filter = filters[0]
+        extra = cls._get_user_filter_domain(
+            user_filter, is_supervisor, user_id)
+        if extra:
+            domain = ['AND', domain, *extra]
+        return super().search(domain, *args, **kwargs)
+
     # ── Helpers testables ───────────────────────────────────────────────
 
     @classmethod

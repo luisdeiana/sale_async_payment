@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<data>
+    <xpath expr="/form/notebook" position="inside">
+        <page string="Cobros asíncronos" id="page_async_filters" col="2">
+            <field name="async_payment_filters" colspan="2"/>
+        </page>
+    </xpath>
+</data>

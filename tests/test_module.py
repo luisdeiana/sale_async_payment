@@ -430,5 +430,65 @@ class TestQRBridge(unittest.TestCase):
         self.assertEqual(vals['match_criteria'], 'bank_reference')
 
 
+class TestUserFilterDomain(unittest.TestCase):
+    """Tests del paso 9: domain dinámico por user_filter."""
+
+    def test_root_user_sees_everything(self):
+        """user_id == 0 (root) → domain vacío."""
+        from sale_async_payment.async_payment import AsyncPayment
+        result = AsyncPayment._get_user_filter_domain(
+            user_filter=MagicMock(),
+            is_supervisor=False, user_id=0)
+        self.assertEqual(result, [])
+
+    def test_supervisor_sees_everything(self):
+        """Supervisor → domain vacío independiente del filtro."""
+        from sale_async_payment.async_payment import AsyncPayment
+        result = AsyncPayment._get_user_filter_domain(
+            user_filter=MagicMock(),
+            is_supervisor=True, user_id=5)
+        self.assertEqual(result, [])
+
+    def test_no_filter_configured_sees_everything(self):
+        """Sin user_filter configurado → domain vacío."""
+        from sale_async_payment.async_payment import AsyncPayment
+        result = AsyncPayment._get_user_filter_domain(
+            user_filter=None, is_supervisor=False, user_id=5)
+        self.assertEqual(result, [])
+
+    def test_shops_filter_limits_to_those_shops(self):
+        """user_filter.shops != [] → domain limita a esas sucursales."""
+        from sale_async_payment.async_payment import AsyncPayment
+        uf = MagicMock()
+        uf.shops = [MagicMock(id=1), MagicMock(id=3)]
+        uf.only_own = False
+        result = AsyncPayment._get_user_filter_domain(
+            user_filter=uf, is_supervisor=False, user_id=5)
+        self.assertEqual(result, [('shop', 'in', [1, 3])])
+
+    def test_only_own_filter_adds_create_uid(self):
+        """user_filter.only_own=True → agrega ('create_uid', '=', user_id)."""
+        from sale_async_payment.async_payment import AsyncPayment
+        uf = MagicMock()
+        uf.shops = []
+        uf.only_own = True
+        result = AsyncPayment._get_user_filter_domain(
+            user_filter=uf, is_supervisor=False, user_id=5)
+        self.assertEqual(result, [('create_uid', '=', 5)])
+
+    def test_shops_and_only_own_combined(self):
+        """Ambos filtros activos → ambos en el domain."""
+        from sale_async_payment.async_payment import AsyncPayment
+        uf = MagicMock()
+        uf.shops = [MagicMock(id=2)]
+        uf.only_own = True
+        result = AsyncPayment._get_user_filter_domain(
+            user_filter=uf, is_supervisor=False, user_id=7)
+        self.assertEqual(result, [
+            ('shop', 'in', [2]),
+            ('create_uid', '=', 7),
+        ])
+
+
 if __name__ == '__main__':
     unittest.main()
