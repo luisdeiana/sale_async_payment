@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<tryton>
+    <data>
+        <!-- Cron de expiración: marca como 'expired' los async
+             pending/suggested cuya expiration_date ya pasó. -->
+        <record model="ir.cron" id="cron_expire_async">
+            <field name="method">sale.async_payment|expire_cron</field>
+            <field name="interval_number" eval="1"/>
+            <field name="interval_type">hours</field>
+        </record>
+    </data>
+</tryton>

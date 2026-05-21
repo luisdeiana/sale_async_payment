@@ -735,5 +735,40 @@ class TestFindCandidate(unittest.TestCase):
         lock_mock.assert_not_called()
 
 
+class TestExpireCron(unittest.TestCase):
+    """Tests del paso 12: cron de expiración."""
+
+    def test_expire_domain_filters_correctly(self):
+        """Domain incluye pending+suggested, exige expiration_date no null
+        y <= now. expired/confirmed/cancelled quedan fuera."""
+        from sale_async_payment.async_payment import AsyncPayment
+        now = datetime.datetime(2026, 5, 21, 12, 0)
+        domain = AsyncPayment._expire_domain(now)
+        self.assertIn(('state', 'in', ['pending', 'suggested']), domain)
+        self.assertIn(('expiration_date', '!=', None), domain)
+        self.assertIn(('expiration_date', '<=', now), domain)
+
+    def test_expire_cron_writes_expired_when_candidates_found(self):
+        """expire_cron busca con _expire_domain y hace write a 'expired'."""
+        from sale_async_payment.async_payment import AsyncPayment
+        a1 = MagicMock(id=1)
+        a2 = MagicMock(id=2)
+        with patch.object(
+                AsyncPayment, 'search', return_value=[a1, a2]
+                ) as search_mock, \
+             patch.object(AsyncPayment, 'write') as write_mock:
+            AsyncPayment.expire_cron()
+        search_mock.assert_called_once()
+        write_mock.assert_called_once_with([a1, a2], {'state': 'expired'})
+
+    def test_expire_cron_noop_when_nothing_to_expire(self):
+        """Sin candidatos → no write."""
+        from sale_async_payment.async_payment import AsyncPayment
+        with patch.object(AsyncPayment, 'search', return_value=[]), \
+             patch.object(AsyncPayment, 'write') as write_mock:
+            AsyncPayment.expire_cron()
+        write_mock.assert_not_called()
+
+
 if __name__ == '__main__':
     unittest.main()

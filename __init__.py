@@ -2,6 +2,7 @@ from trytond.pool import Pool
 
 from . import async_payment
 from . import configuration
+from . import ir
 from . import mp_bridge
 from . import qr_bridge
 from . import sale
@@ -16,6 +17,7 @@ def register():
         configuration.AsyncPaymentConfig,
         configuration.AsyncPaymentUserFilter,
         configuration.AsyncPaymentUserFilterShop,
+        ir.Cron,
         sale.Sale,
         user.User,
         wizard.SalePaymentForm,

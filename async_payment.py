@@ -373,6 +373,24 @@ class AsyncPayment(Workflow, ModelSQL, ModelView):
         diff = received - amount
         return received, diff
 
+    # ── Cron de expiración (paso 12) ────────────────────────────────────
+
+    @classmethod
+    def _expire_domain(cls, now):
+        # Helper testeable: domain para encontrar async expirables.
+        return [
+            ('state', 'in', ['pending', 'suggested']),
+            ('expiration_date', '!=', None),
+            ('expiration_date', '<=', now),
+        ]
+
+    @classmethod
+    def expire_cron(cls):
+        now = datetime.datetime.now()
+        to_expire = cls.search(cls._expire_domain(now))
+        if to_expire:
+            cls.write(list(to_expire), {'state': 'expired'})
+
     # ── Transiciones (botones) ──────────────────────────────────────────
 
     @classmethod
