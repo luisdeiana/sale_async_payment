@@ -9,8 +9,6 @@
     <field name="has_mp_link"/>
     <label name="has_bank_transfer"/>
     <field name="has_bank_transfer"/>
-    <label name="has_debin"/>
-    <field name="has_debin"/>
     <separator string="Notas" id="sep_notes" colspan="4"/>
     <field name="notes" colspan="4"/>
 </form>

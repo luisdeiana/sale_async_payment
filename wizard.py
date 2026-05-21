@@ -17,8 +17,7 @@ _JOURNAL_METHOD_MAP = {
         'bank_transfer': 'enable_async_transfer',
     },
     'bank_polling': {
-        'bank_transfer': 'enable_async_transfer',
-        'debin': 'enable_async_debin',
+        'bank_transfer': 'enable_async_bank_transfer',
     },
 }
 
@@ -75,7 +74,6 @@ class AsyncMethodSelectForm(ModelView):
     has_mp_link = fields.Boolean('MP Link habilitado', readonly=True)
     has_bank_transfer = fields.Boolean(
         'Transferencia habilitada', readonly=True)
-    has_debin = fields.Boolean('DEBIN habilitado', readonly=True)
 
 
 class AsyncConfirmForm(ModelView):
@@ -138,7 +136,6 @@ class WizardSalePayment(metaclass=PoolMeta):
             'payment_amount': amount,
             'has_mp_link': flags.get('mp_link', False),
             'has_bank_transfer': flags.get('bank_transfer', False),
-            'has_debin': flags.get('debin', False),
             'notes': None,
         }
 

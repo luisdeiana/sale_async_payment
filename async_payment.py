@@ -29,7 +29,6 @@ PAYMENT_METHODS = [
     ('mp_link', 'Link Mercado Pago'),
     ('mp_qr_static', 'QR Mercado Pago (estático)'),
     ('bank_transfer', 'Transferencia bancaria'),
-    ('debin', 'DEBIN'),
     ('other', 'Otro'),
 ]
 
@@ -113,8 +112,7 @@ class AsyncPayment(Workflow, ModelSQL, ModelView):
     qr_detection = fields.Many2One(
         'account.payment.qr.detection', 'Detección QR',
         ondelete='SET NULL',
-        states={'invisible': ~Eval('payment_method').in_(
-                    ['bank_transfer', 'debin']),
+        states={'invisible': Eval('payment_method') != 'bank_transfer',
                 'readonly': Eval('state').in_(['confirmed', 'cancelled'])})
 
     # Resultado de la confirmación

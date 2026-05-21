@@ -18,8 +18,9 @@ class TestAsyncPaymentModel(unittest.TestCase):
         """Todos los métodos de cobro asíncrono están definidos."""
         from sale_async_payment.async_payment import PAYMENT_METHODS
         method_keys = [m[0] for m in PAYMENT_METHODS]
-        for expected in ('mp_link', 'mp_qr_static', 'bank_transfer', 'debin', 'other'):
+        for expected in ('mp_link', 'mp_qr_static', 'bank_transfer', 'other'):
             self.assertIn(expected, method_keys)
+        self.assertNotIn('debin', method_keys)
 
     def test_default_state_is_pending(self):
         """El estado por defecto de un cobro asíncrono es 'pending'."""
@@ -59,10 +60,10 @@ class TestAsyncToggles(unittest.TestCase):
         self.assertFalse(Configuration.default_enable_async_link())
 
     def test_qr_config_async_defaults_are_false(self):
-        """enable_async_transfer y enable_async_debin en config QR son False por defecto."""
+        """enable_async_transfer y enable_async_bank_transfer en config QR son False por defecto."""
         from account_payment_qr.configuration import Configuration
         self.assertFalse(Configuration.default_enable_async_transfer())
-        self.assertFalse(Configuration.default_enable_async_debin())
+        self.assertFalse(Configuration.default_enable_async_bank_transfer())
 
 
 class TestSaleAsyncOverrides(unittest.TestCase):
