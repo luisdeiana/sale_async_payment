@@ -276,5 +276,159 @@ class TestAsyncConfirmDiff(unittest.TestCase):
         self.assertEqual(diff, Decimal('0'))
 
 
+class TestMPBridge(unittest.TestCase):
+    """Tests del paso 8: bridge MP auto-confirma async."""
+
+    def test_candidates_from_write_args_filters_state_and_line(self):
+        """Solo writes que tocan state o statement_line entran como candidatos."""
+        from sale_async_payment.mp_bridge import MPTransaction
+        r1 = MagicMock(id=1)
+        r2 = MagicMock(id=2)
+        r3 = MagicMock(id=3)
+        args = (
+            [r1, r2], {'state': 'approved', 'date_approved': 'today'},
+            [r3], {'description': 'algo'},  # NO toca state ni line → fuera
+        )
+        result = MPTransaction._candidates_from_write_args(args)
+        self.assertEqual(result, {1, 2})
+
+    def test_candidates_includes_statement_line_writes(self):
+        """Writes que actualizan statement_line también entran."""
+        from sale_async_payment.mp_bridge import MPTransaction
+        r1 = MagicMock(id=10)
+        args = ([r1], {'statement_line': 42})
+        self.assertEqual(
+            MPTransaction._candidates_from_write_args(args), {10})
+
+    def test_is_ready_only_when_approved_and_has_line(self):
+        """Disparo solo cuando approved Y statement_line != None."""
+        from sale_async_payment.mp_bridge import MPTransaction
+        # approved sin línea: no listo (webhook todavía no creó la línea)
+        t1 = MagicMock(state='approved', statement_line=None)
+        self.assertFalse(MPTransaction._is_transaction_ready_for_async(t1))
+        # pending con línea: no listo
+        t2 = MagicMock(state='pending', statement_line=MagicMock(id=1))
+        self.assertFalse(MPTransaction._is_transaction_ready_for_async(t2))
+        # approved con línea: listo
+        t3 = MagicMock(state='approved', statement_line=MagicMock(id=1))
+        self.assertTrue(MPTransaction._is_transaction_ready_for_async(t3))
+
+    def test_auto_confirm_links_sale_and_marks_confirmed(self):
+        """Cuando una transaction approved se vincula a un async pending,
+        el bridge vincula sale en la línea (si falta) y marca el async
+        como confirmed."""
+        from sale_async_payment.mp_bridge import MPTransaction
+
+        # Statement.line del webhook sin sale vinculada
+        line = MagicMock(id=500, sale=None)
+        txn = MagicMock(
+            id=7, state='approved', statement_line=line,
+            amount=Decimal('1000'))
+        ap = MagicMock(
+            id=42, state='pending',
+            mp_transaction=txn,
+            sale=MagicMock(id=99))
+
+        async_payment_cls = MagicMock()
+        stmt_line_cls = MagicMock()
+
+        def pool_get(model):
+            return {
+                'sale.async_payment': async_payment_cls,
+                'account.statement.line': stmt_line_cls,
+            }[model]
+
+        pool_mock = MagicMock()
+        pool_mock.get.side_effect = pool_get
+
+        txn_by_id = {7: txn}
+        with patch('sale_async_payment.mp_bridge.Pool', return_value=pool_mock):
+            MPTransaction._auto_confirm_linked_async([ap], txn_by_id)
+
+        # Sale vinculada en la línea del webhook
+        stmt_line_cls.write.assert_called_once_with([line], {'sale': 99})
+
+        # Async marcado como confirmed con datos del txn
+        async_payment_cls.write.assert_called_once()
+        call_args = async_payment_cls.write.call_args[0]
+        self.assertEqual(call_args[0], [ap])
+        vals = call_args[1]
+        self.assertEqual(vals['state'], 'confirmed')
+        self.assertEqual(vals['statement_line'], 500)
+        self.assertEqual(vals['received_amount'], Decimal('1000'))
+        self.assertEqual(vals['match_criteria'], 'mp_payment_id')
+
+    def test_auto_confirm_skips_sale_link_when_already_set(self):
+        """Si la statement.line ya tiene sale, el bridge no la sobreescribe."""
+        from sale_async_payment.mp_bridge import MPTransaction
+
+        existing_sale = MagicMock(id=88)
+        line = MagicMock(id=501, sale=existing_sale)
+        txn = MagicMock(
+            id=8, state='approved', statement_line=line,
+            amount=Decimal('500'))
+        ap = MagicMock(
+            id=43, state='pending',
+            mp_transaction=txn,
+            sale=MagicMock(id=99))
+
+        async_payment_cls = MagicMock()
+        stmt_line_cls = MagicMock()
+
+        def pool_get(model):
+            return {
+                'sale.async_payment': async_payment_cls,
+                'account.statement.line': stmt_line_cls,
+            }[model]
+
+        pool_mock = MagicMock()
+        pool_mock.get.side_effect = pool_get
+
+        with patch('sale_async_payment.mp_bridge.Pool', return_value=pool_mock):
+            MPTransaction._auto_confirm_linked_async([ap], {8: txn})
+
+        stmt_line_cls.write.assert_not_called()
+        async_payment_cls.write.assert_called_once()
+
+
+class TestQRBridge(unittest.TestCase):
+    """Tests del paso 8: bridge QR auto-confirma async."""
+
+    def test_is_ready_only_when_confirmed(self):
+        from sale_async_payment.qr_bridge import QRDetection
+        d1 = MagicMock(state='confirmed')
+        d2 = MagicMock(state='matched')
+        d3 = MagicMock(state='pending')
+        self.assertTrue(QRDetection._is_detection_ready_for_async(d1))
+        self.assertFalse(QRDetection._is_detection_ready_for_async(d2))
+        self.assertFalse(QRDetection._is_detection_ready_for_async(d3))
+
+    def test_auto_confirm_links_async_with_detection_data(self):
+        from sale_async_payment.qr_bridge import QRDetection
+
+        line = MagicMock(id=601)
+        det = MagicMock(
+            id=15, state='confirmed', amount=Decimal('800'),
+            bank_reference='REF-999', payer_name='Juan',
+            payer_cuit='20-12345678-9', statement_line=line)
+        ap = MagicMock(id=77, state='pending', qr_detection=det)
+
+        async_payment_cls = MagicMock()
+        pool_mock = MagicMock()
+        pool_mock.get.return_value = async_payment_cls
+
+        with patch('sale_async_payment.qr_bridge.Pool', return_value=pool_mock):
+            QRDetection._auto_confirm_linked_async([ap], {15: det})
+
+        async_payment_cls.write.assert_called_once()
+        vals = async_payment_cls.write.call_args[0][1]
+        self.assertEqual(vals['state'], 'confirmed')
+        self.assertEqual(vals['received_amount'], Decimal('800'))
+        self.assertEqual(vals['bank_reference'], 'REF-999')
+        self.assertEqual(vals['payer_name'], 'Juan')
+        self.assertEqual(vals['statement_line'], 601)
+        self.assertEqual(vals['match_criteria'], 'bank_reference')
+
+
 if __name__ == '__main__':
     unittest.main()

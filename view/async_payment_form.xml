@@ -31,6 +31,8 @@
     <field name="matched_date"/>
     <label name="mp_transaction"/>
     <field name="mp_transaction"/>
+    <label name="qr_detection"/>
+    <field name="qr_detection"/>
     <separator string="Resultado" colspan="4" id="sep_result"/>
     <label name="statement_line"/>
     <field name="statement_line"/>

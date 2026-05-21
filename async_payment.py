@@ -104,6 +104,12 @@ class AsyncPayment(Workflow, ModelSQL, ModelView):
         ondelete='SET NULL',
         states={'invisible': Eval('payment_method') != 'mp_link',
                 'readonly': Eval('state').in_(['confirmed', 'cancelled'])})
+    qr_detection = fields.Many2One(
+        'account.payment.qr.detection', 'Detección QR',
+        ondelete='SET NULL',
+        states={'invisible': ~Eval('payment_method').in_(
+                    ['bank_transfer', 'debin']),
+                'readonly': Eval('state').in_(['confirmed', 'cancelled'])})
 
     # Resultado de la confirmación
     statement_line = fields.Many2One(
