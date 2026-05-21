@@ -181,6 +181,9 @@ class WizardSalePayment(metaclass=PoolMeta):
         self._async_validate_method(method, flags)
 
         shop_id = sale.shop.id if getattr(sale, 'shop', None) else None
+        Config = pool.get('sale.async_payment.config')
+        config = Config(1)
+        expiration_date = config.compute_expiration_date(method)
         vals = {
             'sale': sale.id,
             'amount': amount,
@@ -189,6 +192,7 @@ class WizardSalePayment(metaclass=PoolMeta):
             'notes': form.notes or None,
             'state': 'pending',
             'shop': shop_id,
+            'expiration_date': expiration_date,
         }
         async_payment = AsyncPayment.create([vals])[0]
 

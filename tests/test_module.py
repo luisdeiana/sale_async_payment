@@ -44,10 +44,57 @@ class TestAsyncPaymentModel(unittest.TestCase):
     def test_configuration_defaults(self):
         """Los valores por defecto de vencimiento son razonables."""
         from sale_async_payment.configuration import AsyncPaymentConfig
-        self.assertEqual(AsyncPaymentConfig.default_expiration_hours_mp_link(), 72)
-        self.assertEqual(AsyncPaymentConfig.default_expiration_hours_bank_transfer(), 48)
-        self.assertEqual(AsyncPaymentConfig.default_expiration_hours_debin(), 24)
-        self.assertEqual(AsyncPaymentConfig.default_expiration_hours_other(), 48)
+        self.assertEqual(AsyncPaymentConfig.default_default_expiration_value(), 48)
+        self.assertEqual(AsyncPaymentConfig.default_default_expiration_unit(), 'hours')
+
+    def test_configuration_line_defaults(self):
+        """La línea de config tiene defaults razonables."""
+        from sale_async_payment.configuration import AsyncPaymentConfigLine
+        self.assertEqual(AsyncPaymentConfigLine.default_expiration_value(), 48)
+        self.assertEqual(AsyncPaymentConfigLine.default_expiration_unit(), 'hours')
+
+    def test_compute_expiration_date_uses_default_when_no_line(self):
+        """compute_expiration_date sin líneas usa el default."""
+        from sale_async_payment.configuration import AsyncPaymentConfig
+        config = MagicMock()
+        config.lines = []
+        config.default_expiration_value = 24
+        config.default_expiration_unit = 'hours'
+        before = datetime.datetime.now()
+        result = AsyncPaymentConfig.compute_expiration_date(config, 'bank_transfer')
+        after = datetime.datetime.now()
+        self.assertGreaterEqual(result, before + datetime.timedelta(hours=24))
+        self.assertLessEqual(result, after + datetime.timedelta(hours=24))
+
+    def test_compute_expiration_date_uses_line_when_matches(self):
+        """compute_expiration_date con línea coincidente usa esa línea."""
+        from sale_async_payment.configuration import AsyncPaymentConfig
+        line = MagicMock()
+        line.payment_method = 'mp_link'
+        line.expiration_value = 72
+        line.expiration_unit = 'hours'
+        config = MagicMock()
+        config.lines = [line]
+        config.default_expiration_value = 48
+        config.default_expiration_unit = 'hours'
+        before = datetime.datetime.now()
+        result = AsyncPaymentConfig.compute_expiration_date(config, 'mp_link')
+        after = datetime.datetime.now()
+        self.assertGreaterEqual(result, before + datetime.timedelta(hours=72))
+        self.assertLessEqual(result, after + datetime.timedelta(hours=72))
+
+    def test_compute_expiration_date_days_unit(self):
+        """compute_expiration_date con unidad 'days' convierte correctamente."""
+        from sale_async_payment.configuration import AsyncPaymentConfig
+        config = MagicMock()
+        config.lines = []
+        config.default_expiration_value = 2
+        config.default_expiration_unit = 'days'
+        before = datetime.datetime.now()
+        result = AsyncPaymentConfig.compute_expiration_date(config, 'other')
+        after = datetime.datetime.now()
+        self.assertGreaterEqual(result, before + datetime.timedelta(days=2))
+        self.assertLessEqual(result, after + datetime.timedelta(days=2))
 
 
 class TestAsyncToggles(unittest.TestCase):
@@ -179,11 +226,18 @@ class TestWizardAsyncRegister(unittest.TestCase):
         refreshed_sale.async_pending_amount = Decimal('1000')
         sale_cls.return_value = refreshed_sale
 
+        async_config_cls = MagicMock()
+        async_config_instance = MagicMock()
+        async_config_instance.compute_expiration_date.return_value = (
+            datetime.datetime(2026, 6, 1, 12, 0))
+        async_config_cls.return_value = async_config_instance
+
         def pool_get(model):
             return {
                 'sale.async_payment': async_payment_cls,
                 'sale.sale': sale_cls,
                 'account.payment.mp.config': mp_config_cls,
+                'sale.async_payment.config': async_config_cls,
             }[model]
 
         pool_mock = MagicMock()

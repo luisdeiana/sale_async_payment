@@ -15,6 +15,7 @@ def register():
     Pool.register(
         async_payment.AsyncPayment,
         configuration.AsyncPaymentConfig,
+        configuration.AsyncPaymentConfigLine,
         configuration.AsyncPaymentUserFilter,
         configuration.AsyncPaymentUserFilterShop,
         ir.Cron,

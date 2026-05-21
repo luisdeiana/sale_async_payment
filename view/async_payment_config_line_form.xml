@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<form>
+    <label name="payment_method"/>
+    <field name="payment_method"/>
+    <label name="expiration_value"/>
+    <field name="expiration_value"/>
+    <label name="expiration_unit"/>
+    <field name="expiration_unit"/>
+</form>
