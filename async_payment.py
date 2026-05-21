@@ -1,11 +1,14 @@
 import datetime
 from decimal import Decimal
 
+from sql import For, Literal
+
 from trytond.exceptions import UserError, UserWarning
 from trytond.model import (
     DeactivableMixin, ModelSQL, ModelView, Workflow, fields)
 from trytond.pool import Pool
 from trytond.pyson import Eval, If
+from trytond.rpc import RPC
 from trytond.transaction import Transaction
 
 
@@ -148,6 +151,9 @@ class AsyncPayment(Workflow, ModelSQL, ModelView):
             ('suggested', 'cancelled'),
             ('expired', 'pending'),
         }
+        cls.__rpc__.update({
+            'find_candidate': RPC(readonly=False, instantiate=None),
+        })
         cls._buttons.update({
             'confirm': {
                 'invisible': ~Eval('state').in_(['pending', 'suggested']),
@@ -217,6 +223,141 @@ class AsyncPayment(Workflow, ModelSQL, ModelView):
         if extra:
             domain = ['AND', domain, *extra]
         return super().search(domain, *args, **kwargs)
+
+    # ── find_candidate (paso 11) — matching de pagos entrantes ──────────
+
+    @classmethod
+    def _normalize_cuit(cls, cuit):
+        if not cuit:
+            return ''
+        return ''.join(c for c in str(cuit) if c.isdigit())
+
+    @classmethod
+    def _build_match_domains(cls, payment_data, amount):
+        # Lista ordenada de (domain, match_criteria). El consumidor
+        # itera y para en el primero que encuentra resultados.
+        # Orden: más específico → más amplio.
+        domains = []
+
+        mp_id = payment_data.get('mp_payment_id')
+        if mp_id:
+            domains.append((
+                [('state', 'in', ['pending', 'suggested']),
+                 ('mp_payment_id', '=', mp_id)],
+                'mp_payment_id'))
+
+        bank_ref = payment_data.get('bank_reference')
+        if bank_ref:
+            domains.append((
+                [('state', 'in', ['pending', 'suggested']),
+                 ('bank_reference', '=', bank_ref)],
+                'bank_reference'))
+
+        payer_cuit = payment_data.get('payer_cuit')
+        if payer_cuit:
+            clean = cls._normalize_cuit(payer_cuit)
+            if clean:
+                domains.append((
+                    [('state', '=', 'pending'),
+                     ('sale.party.tax_identifier.code', '=', clean)],
+                    'payer_cuit'))
+
+        if amount is not None:
+            domains.append((
+                [('state', '=', 'pending'),
+                 ('amount', '=', amount)],
+                'amount_exact'))
+
+        return domains
+
+    @classmethod
+    def _lock_for_update(cls, ids):
+        if not ids:
+            return
+        transaction = Transaction()
+        database = transaction.database
+        connection = transaction.connection
+        if database.has_select_for():
+            table = cls.__table__()
+            query = table.select(
+                Literal(1),
+                where=table.id.in_(list(ids)),
+                for_=For('UPDATE', nowait=True))
+            with connection.cursor() as cursor:
+                cursor.execute(*query)
+        else:
+            cls.lock()
+
+    @classmethod
+    def find_candidate(cls, payment_data):
+        # Retorna dict {'matched': bool, 'async_id': int|None,
+        # 'match_criteria': str|None, 'reason': str|None}.
+        # Pensado para ser llamado desde el webhook MP y el poller
+        # IMAP del Motor IA vía XML-RPC. Marca async pending como
+        # suggested cuando encuentra match único.
+        if not isinstance(payment_data, dict):
+            return {
+                'matched': False, 'async_id': None,
+                'match_criteria': None, 'reason': 'invalid_payload'}
+
+        raw_amount = payment_data.get('amount')
+        try:
+            amount = (
+                Decimal(str(raw_amount)) if raw_amount is not None
+                else None)
+        except Exception:
+            amount = None
+
+        domains = cls._build_match_domains(payment_data, amount)
+        if not domains:
+            return {
+                'matched': False, 'async_id': None,
+                'match_criteria': None, 'reason': 'no_data'}
+
+        # Refinar por amount cuando el tier por CUIT da varios:
+        # si el monto coincide con alguno, ese gana.
+        for domain, criteria in domains:
+            matches = cls.search(domain)
+            if not matches:
+                continue
+            if len(matches) > 1 and amount is not None:
+                exact = [m for m in matches if m.amount == amount]
+                if len(exact) == 1:
+                    matches = exact
+            if len(matches) > 1:
+                return {
+                    'matched': False, 'async_id': None,
+                    'match_criteria': criteria, 'reason': 'ambiguous',
+                    'candidate_count': len(matches)}
+            candidate = matches[0]
+            cls._lock_for_update([candidate.id])
+            now = datetime.datetime.now()
+            write_vals = {
+                'received_amount': amount,
+                'match_criteria': criteria,
+                'matched_date': now,
+            }
+            if payment_data.get('mp_payment_id'):
+                write_vals['mp_payment_id'] = payment_data['mp_payment_id']
+            if payment_data.get('bank_reference'):
+                write_vals['bank_reference'] = (
+                    payment_data['bank_reference'])
+            if payment_data.get('payer_name'):
+                write_vals['payer_name'] = payment_data['payer_name']
+            if payment_data.get('payer_cuit'):
+                write_vals['payer_cuit'] = payment_data['payer_cuit']
+            # Pending → suggested. Si ya estaba suggested, solo
+            # actualizar los datos (idempotente).
+            if candidate.state == 'pending':
+                write_vals['state'] = 'suggested'
+            cls.write([candidate], write_vals)
+            return {
+                'matched': True, 'async_id': candidate.id,
+                'match_criteria': criteria, 'reason': None}
+
+        return {
+            'matched': False, 'async_id': None,
+            'match_criteria': None, 'reason': 'no_candidate'}
 
     # ── Helpers testables ───────────────────────────────────────────────
 

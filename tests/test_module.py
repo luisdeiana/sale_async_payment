@@ -581,5 +581,159 @@ class TestUnassignedPayment(unittest.TestCase):
         self.assertNotIn('mp_transaction', vals)
 
 
+class TestFindCandidateHelpers(unittest.TestCase):
+    """Tests del paso 11: helpers de find_candidate."""
+
+    def test_normalize_cuit_strips_separators(self):
+        from sale_async_payment.async_payment import AsyncPayment
+        self.assertEqual(
+            AsyncPayment._normalize_cuit('20-12345678-9'), '20123456789')
+        self.assertEqual(
+            AsyncPayment._normalize_cuit('20.12345678.9'), '20123456789')
+        self.assertEqual(
+            AsyncPayment._normalize_cuit('20 12345678 9'), '20123456789')
+
+    def test_normalize_cuit_empty(self):
+        from sale_async_payment.async_payment import AsyncPayment
+        self.assertEqual(AsyncPayment._normalize_cuit(None), '')
+        self.assertEqual(AsyncPayment._normalize_cuit(''), '')
+        self.assertEqual(AsyncPayment._normalize_cuit('abc'), '')
+
+    def test_build_match_domains_orders_by_specificity(self):
+        from sale_async_payment.async_payment import AsyncPayment
+        payment_data = {
+            'mp_payment_id': 'MP-001',
+            'bank_reference': 'BANK-9',
+            'payer_cuit': '20-12345678-9',
+        }
+        domains = AsyncPayment._build_match_domains(
+            payment_data, Decimal('500'))
+        criterias = [c for _, c in domains]
+        self.assertEqual(
+            criterias,
+            ['mp_payment_id', 'bank_reference',
+             'payer_cuit', 'amount_exact'])
+
+    def test_build_match_domains_empty_payload(self):
+        from sale_async_payment.async_payment import AsyncPayment
+        self.assertEqual(
+            AsyncPayment._build_match_domains({}, None), [])
+
+    def test_build_match_domains_only_amount(self):
+        from sale_async_payment.async_payment import AsyncPayment
+        domains = AsyncPayment._build_match_domains({}, Decimal('100'))
+        self.assertEqual(len(domains), 1)
+        self.assertEqual(domains[0][1], 'amount_exact')
+        self.assertIn(('amount', '=', Decimal('100')), domains[0][0])
+
+
+class TestFindCandidate(unittest.TestCase):
+    """Tests del paso 11: find_candidate."""
+
+    def test_find_candidate_no_data_returns_no_data(self):
+        from sale_async_payment.async_payment import AsyncPayment
+        result = AsyncPayment.find_candidate({})
+        self.assertFalse(result['matched'])
+        self.assertEqual(result['reason'], 'no_data')
+
+    def test_find_candidate_invalid_payload(self):
+        from sale_async_payment.async_payment import AsyncPayment
+        result = AsyncPayment.find_candidate('not-a-dict')
+        self.assertFalse(result['matched'])
+        self.assertEqual(result['reason'], 'invalid_payload')
+
+    def test_find_candidate_unique_match_writes_suggested(self):
+        """Match único → write con state='suggested' + datos del payer."""
+        from sale_async_payment.async_payment import AsyncPayment
+
+        candidate = MagicMock(id=42, state='pending', amount=Decimal('1000'))
+
+        with patch.object(
+                AsyncPayment, 'search', return_value=[candidate]
+                ) as search_mock, \
+             patch.object(AsyncPayment, '_lock_for_update') as lock_mock, \
+             patch.object(AsyncPayment, 'write') as write_mock:
+            result = AsyncPayment.find_candidate({
+                'bank_reference': 'BANK-REF-123',
+                'amount': '1000',
+                'payer_name': 'Juan',
+                'payer_cuit': '20-12345678-9',
+            })
+
+        self.assertTrue(result['matched'])
+        self.assertEqual(result['async_id'], 42)
+        self.assertEqual(result['match_criteria'], 'bank_reference')
+
+        lock_mock.assert_called_once_with([42])
+        write_mock.assert_called_once()
+        args, _ = write_mock.call_args
+        self.assertEqual(args[0], [candidate])
+        vals = args[1]
+        self.assertEqual(vals['state'], 'suggested')
+        self.assertEqual(vals['match_criteria'], 'bank_reference')
+        self.assertEqual(vals['received_amount'], Decimal('1000'))
+        self.assertEqual(vals['bank_reference'], 'BANK-REF-123')
+        self.assertEqual(vals['payer_name'], 'Juan')
+
+    def test_find_candidate_ambiguous_does_not_write(self):
+        """Múltiples candidatos sin desempate → no write, reason='ambiguous'."""
+        from sale_async_payment.async_payment import AsyncPayment
+
+        m1 = MagicMock(id=1, state='pending', amount=Decimal('500'))
+        m2 = MagicMock(id=2, state='pending', amount=Decimal('700'))
+
+        with patch.object(
+                AsyncPayment, 'search', return_value=[m1, m2]), \
+             patch.object(AsyncPayment, '_lock_for_update') as lock_mock, \
+             patch.object(AsyncPayment, 'write') as write_mock:
+            # amount=300 no coincide con ninguno → ambigüedad sigue
+            result = AsyncPayment.find_candidate({
+                'payer_cuit': '20-12345678-9',
+                'amount': '300',
+            })
+
+        self.assertFalse(result['matched'])
+        self.assertEqual(result['reason'], 'ambiguous')
+        self.assertEqual(result['candidate_count'], 2)
+        lock_mock.assert_not_called()
+        write_mock.assert_not_called()
+
+    def test_find_candidate_ambiguous_resolved_by_amount(self):
+        """2 candidatos por CUIT pero solo uno con amount exacto → match."""
+        from sale_async_payment.async_payment import AsyncPayment
+
+        m1 = MagicMock(id=1, state='pending', amount=Decimal('500'))
+        m2 = MagicMock(id=2, state='pending', amount=Decimal('800'))
+
+        with patch.object(
+                AsyncPayment, 'search', return_value=[m1, m2]), \
+             patch.object(AsyncPayment, '_lock_for_update'), \
+             patch.object(AsyncPayment, 'write') as write_mock:
+            result = AsyncPayment.find_candidate({
+                'payer_cuit': '20-12345678-9',
+                'amount': '800',
+            })
+
+        self.assertTrue(result['matched'])
+        self.assertEqual(result['async_id'], 2)
+        self.assertEqual(result['match_criteria'], 'payer_cuit')
+        write_mock.assert_called_once()
+
+    def test_find_candidate_no_match_returns_no_candidate(self):
+        """search retorna [] en todos los tiers → no_candidate."""
+        from sale_async_payment.async_payment import AsyncPayment
+
+        with patch.object(AsyncPayment, 'search', return_value=[]), \
+             patch.object(AsyncPayment, '_lock_for_update') as lock_mock:
+            result = AsyncPayment.find_candidate({
+                'mp_payment_id': 'MP-X',
+                'amount': '500',
+            })
+
+        self.assertFalse(result['matched'])
+        self.assertEqual(result['reason'], 'no_candidate')
+        lock_mock.assert_not_called()
+
+
 if __name__ == '__main__':
     unittest.main()
