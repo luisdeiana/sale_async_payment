@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<form>
+    <separator string="Vencimiento por método de cobro (horas)"
+        colspan="4" id="sep_expiration"/>
+    <label name="expiration_hours_mp_link"/>
+    <field name="expiration_hours_mp_link"/>
+    <label name="expiration_hours_bank_transfer"/>
+    <field name="expiration_hours_bank_transfer"/>
+    <label name="expiration_hours_debin"/>
+    <field name="expiration_hours_debin"/>
+    <label name="expiration_hours_other"/>
+    <field name="expiration_hours_other"/>
+</form>

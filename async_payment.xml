@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<tryton>
+    <data>
+        <!-- Vistas del modelo sale.async_payment -->
+        <record model="ir.ui.view" id="async_payment_view_form">
+            <field name="model">sale.async_payment</field>
+            <field name="type">form</field>
+            <field name="name">async_payment_form</field>
+        </record>
+        <record model="ir.ui.view" id="async_payment_view_tree">
+            <field name="model">sale.async_payment</field>
+            <field name="type">tree</field>
+            <field name="name">async_payment_tree</field>
+        </record>
+
+        <!-- Acción principal: lista de cobros asíncronos -->
+        <record model="ir.action.act_window" id="act_async_payment">
+            <field name="name">Cobros pendientes</field>
+            <field name="res_model">sale.async_payment</field>
+        </record>
+        <record model="ir.action.act_window.view"
+            id="act_async_payment_view_tree">
+            <field name="sequence" eval="10"/>
+            <field name="view" ref="async_payment_view_tree"/>
+            <field name="act_window" ref="act_async_payment"/>
+        </record>
+        <record model="ir.action.act_window.view"
+            id="act_async_payment_view_form">
+            <field name="sequence" eval="20"/>
+            <field name="view" ref="async_payment_view_form"/>
+            <field name="act_window" ref="act_async_payment"/>
+        </record>
+
+        <!-- Menú: Cobros → Cobros pendientes -->
+        <menuitem
+            id="menu_async_payment"
+            name="Cobros pendientes"
+            parent="account_payment_qr.menu_cobros_qr"
+            action="act_async_payment"
+            icon="tryton-payment"
+            sequence="10"/>
+    </data>
+</tryton>

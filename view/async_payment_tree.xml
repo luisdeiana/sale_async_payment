@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<tree>
+    <field name="sale"/>
+    <field name="payment_method"/>
+    <field name="amount"/>
+    <field name="received_amount"/>
+    <field name="state"/>
+    <field name="shop"/>
+    <field name="expiration_date"/>
+    <field name="payer_name"/>
+</tree>

@@ -1,0 +1,144 @@
+# Spanish translations for sale_async_payment
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+# Model names
+msgid "Async Payment"
+msgstr "Cobro asíncrono"
+
+msgid "Async Payment Config"
+msgstr "Configuración de cobros asíncronos"
+
+msgid "Async Payment User Filter"
+msgstr "Filtro de cobros asíncronos por usuario"
+
+# Field labels
+msgid "Sale"
+msgstr "Venta"
+
+msgid "Amount"
+msgstr "Importe"
+
+msgid "Statement Journal"
+msgstr "Diario de extracto"
+
+msgid "Payment Method"
+msgstr "Método de cobro"
+
+msgid "Shop"
+msgstr "Sucursal"
+
+msgid "Notes"
+msgstr "Notas"
+
+msgid "State"
+msgstr "Estado"
+
+msgid "Expiration Date"
+msgstr "Fecha de vencimiento"
+
+msgid "Received Amount"
+msgstr "Importe recibido"
+
+msgid "MP Payment ID"
+msgstr "ID de pago MP"
+
+msgid "Bank Reference"
+msgstr "Referencia bancaria"
+
+msgid "Payer Name"
+msgstr "Nombre del pagador"
+
+msgid "Payer CUIT"
+msgstr "CUIT del pagador"
+
+msgid "Match Criteria"
+msgstr "Criterio de coincidencia"
+
+msgid "Matched Date"
+msgstr "Fecha de coincidencia"
+
+msgid "MP Transaction"
+msgstr "Transacción MP"
+
+msgid "Statement Line"
+msgstr "Línea de extracto"
+
+msgid "Confirmed By"
+msgstr "Confirmado por"
+
+msgid "Confirmed Date"
+msgstr "Fecha de confirmación"
+
+# Selection values — states
+msgid "Pending"
+msgstr "Pendiente"
+
+msgid "Suggested"
+msgstr "Sugerido"
+
+msgid "Confirmed"
+msgstr "Confirmado"
+
+msgid "Expired"
+msgstr "Vencido"
+
+msgid "Cancelled"
+msgstr "Cancelado"
+
+# Selection values — payment methods
+msgid "Link Mercado Pago"
+msgstr "Link Mercado Pago"
+
+msgid "QR Mercado Pago (estático)"
+msgstr "QR Mercado Pago (estático)"
+
+msgid "Bank Transfer"
+msgstr "Transferencia bancaria"
+
+msgid "DEBIN"
+msgstr "DEBIN"
+
+msgid "Other"
+msgstr "Otro"
+
+# Selection values — match criteria
+msgid "MP Payment ID"
+msgstr "ID de pago MP"
+
+msgid "Bank Reference"
+msgstr "Referencia bancaria"
+
+msgid "Payer CUIT"
+msgstr "CUIT del pagador"
+
+msgid "Exact Amount"
+msgstr "Importe exacto"
+
+msgid "Manual Link"
+msgstr "Vinculación manual"
+
+# Config field labels
+msgid "Expiration Hours — MP Link"
+msgstr "Horas de vencimiento — Link MP"
+
+msgid "Expiration Hours — Bank Transfer"
+msgstr "Horas de vencimiento — Transferencia"
+
+msgid "Expiration Hours — DEBIN"
+msgstr "Horas de vencimiento — DEBIN"
+
+msgid "Expiration Hours — Other"
+msgstr "Horas de vencimiento — Otro"
+
+# User filter field labels
+msgid "User"
+msgstr "Usuario"
+
+msgid "Visible Shops"
+msgstr "Sucursales visibles"
+
+msgid "Only My Payments"
+msgstr "Solo mis cobros"

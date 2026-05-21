@@ -1,0 +1,105 @@
+<?xml version="1.0"?>
+<tryton>
+    <data>
+        <!-- Grupo operativo: puede ver y gestionar cobros asíncronos propios -->
+        <record model="res.group" id="group_async_payment_user">
+            <field name="name">Cobros asíncronos — Operador</field>
+            <field name="parent" ref="sale.group_sale"/>
+        </record>
+
+        <!-- Asignar admin al grupo operativo por defecto -->
+        <record model="res.user-res.group"
+            id="user_admin_group_async_payment_user">
+            <field name="user" search="[('login', '=', 'admin')]"/>
+            <field name="group" ref="group_async_payment_user"/>
+        </record>
+
+        <!-- Acceso al modelo sale.async_payment -->
+        <record model="ir.model.access" id="access_async_payment_supervisor">
+            <field name="model"
+                search="[('model', '=', 'sale.async_payment')]"/>
+            <field name="group"
+                ref="account_payment_methods.group_payment_supervisor"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_delete" eval="True"/>
+        </record>
+        <record model="ir.model.access" id="access_async_payment_user">
+            <field name="model"
+                search="[('model', '=', 'sale.async_payment')]"/>
+            <field name="group" ref="group_async_payment_user"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_delete" eval="False"/>
+        </record>
+
+        <!-- Acceso a la configuración -->
+        <record model="ir.model.access" id="access_async_payment_config_supervisor">
+            <field name="model"
+                search="[('model', '=', 'sale.async_payment.config')]"/>
+            <field name="group"
+                ref="account_payment_methods.group_payment_supervisor"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_delete" eval="False"/>
+        </record>
+        <record model="ir.model.access" id="access_async_payment_config_user">
+            <field name="model"
+                search="[('model', '=', 'sale.async_payment.config')]"/>
+            <field name="group" ref="group_async_payment_user"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_delete" eval="False"/>
+        </record>
+
+        <!-- Acceso al filtro de usuario -->
+        <record model="ir.model.access"
+            id="access_async_payment_user_filter_supervisor">
+            <field name="model"
+                search="[('model', '=', 'sale.async_payment.user_filter')]"/>
+            <field name="group"
+                ref="account_payment_methods.group_payment_supervisor"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_delete" eval="True"/>
+        </record>
+        <record model="ir.model.access"
+            id="access_async_payment_user_filter_user">
+            <field name="model"
+                search="[('model', '=', 'sale.async_payment.user_filter')]"/>
+            <field name="group" ref="group_async_payment_user"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_delete" eval="False"/>
+        </record>
+
+        <!-- Tabla M2M filtro-sucursal -->
+        <record model="ir.model.access"
+            id="access_async_payment_user_filter_shop_supervisor">
+            <field name="model"
+                search="[('model', '=', 'sale.async_payment.user_filter-sale.shop')]"/>
+            <field name="group"
+                ref="account_payment_methods.group_payment_supervisor"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_delete" eval="True"/>
+        </record>
+        <record model="ir.model.access"
+            id="access_async_payment_user_filter_shop_user">
+            <field name="model"
+                search="[('model', '=', 'sale.async_payment.user_filter-sale.shop')]"/>
+            <field name="group" ref="group_async_payment_user"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_delete" eval="False"/>
+        </record>
+    </data>
+</tryton>

@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<tryton>
+    <data>
+        <!-- Vista form de configuración -->
+        <record model="ir.ui.view" id="async_payment_config_view_form">
+            <field name="model">sale.async_payment.config</field>
+            <field name="type">form</field>
+            <field name="name">async_payment_config_form</field>
+        </record>
+
+        <!-- Acción para abrir configuración -->
+        <record model="ir.action.act_window"
+            id="act_async_payment_config">
+            <field name="name">Configuración de cobros asíncronos</field>
+            <field name="res_model">sale.async_payment.config</field>
+        </record>
+        <record model="ir.action.act_window.view"
+            id="act_async_payment_config_view_form">
+            <field name="sequence" eval="10"/>
+            <field name="view" ref="async_payment_config_view_form"/>
+            <field name="act_window" ref="act_async_payment_config"/>
+        </record>
+    </data>
+</tryton>

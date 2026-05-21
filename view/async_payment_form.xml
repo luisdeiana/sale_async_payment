@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<form>
+    <label name="sale"/>
+    <field name="sale" colspan="3"/>
+    <label name="state"/>
+    <field name="state"/>
+    <label name="payment_method"/>
+    <field name="payment_method"/>
+    <label name="amount"/>
+    <field name="amount"/>
+    <label name="journal"/>
+    <field name="journal"/>
+    <label name="shop"/>
+    <field name="shop"/>
+    <label name="expiration_date"/>
+    <field name="expiration_date"/>
+    <separator string="Datos del pago recibido" colspan="4" id="sep_payment_data"/>
+    <label name="received_amount"/>
+    <field name="received_amount"/>
+    <label name="mp_payment_id"/>
+    <field name="mp_payment_id"/>
+    <label name="bank_reference"/>
+    <field name="bank_reference"/>
+    <label name="payer_name"/>
+    <field name="payer_name"/>
+    <label name="payer_cuit"/>
+    <field name="payer_cuit"/>
+    <label name="match_criteria"/>
+    <field name="match_criteria"/>
+    <label name="matched_date"/>
+    <field name="matched_date"/>
+    <label name="mp_transaction"/>
+    <field name="mp_transaction"/>
+    <separator string="Resultado" colspan="4" id="sep_result"/>
+    <label name="statement_line"/>
+    <field name="statement_line"/>
+    <label name="confirmed_by"/>
+    <field name="confirmed_by"/>
+    <label name="confirmed_date"/>
+    <field name="confirmed_date"/>
+    <separator string="Notas" colspan="4" id="sep_notes"/>
+    <label name="notes"/>
+    <field name="notes" colspan="3"/>
+</form>

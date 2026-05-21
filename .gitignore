@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+desktop.ini
+*.swp
+*.swo
+.DS_Store
+setup.py
