@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<form col="2">
+    <separator string="Pago recibido" id="sep_payment" colspan="2"/>
+    <label name="payment_source"/>
+    <field name="payment_source"/>
+    <label name="payment_reference"/>
+    <field name="payment_reference"/>
+    <label name="payment_amount"/>
+    <field name="payment_amount"/>
+    <label name="payer_name"/>
+    <field name="payer_name"/>
+    <separator string="Vincular a la venta" id="sep_link" colspan="2"/>
+    <label name="sale"/>
+    <field name="sale"/>
+</form>

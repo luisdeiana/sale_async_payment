@@ -1,0 +1,89 @@
+<?xml version="1.0"?>
+<tryton>
+    <data>
+        <!-- Vistas del modelo virtual -->
+        <record model="ir.ui.view" id="unassigned_payment_view_tree">
+            <field name="model">sale.unassigned_payment</field>
+            <field name="type">tree</field>
+            <field name="name">unassigned_payment_tree</field>
+        </record>
+        <record model="ir.ui.view" id="unassigned_payment_view_form">
+            <field name="model">sale.unassigned_payment</field>
+            <field name="type">form</field>
+            <field name="name">unassigned_payment_form</field>
+        </record>
+
+        <!-- Acción principal -->
+        <record model="ir.action.act_window" id="act_unassigned_payment">
+            <field name="name">Pagos no asignados</field>
+            <field name="res_model">sale.unassigned_payment</field>
+        </record>
+        <record model="ir.action.act_window.view"
+            id="act_unassigned_payment_view_tree">
+            <field name="sequence" eval="10"/>
+            <field name="view" ref="unassigned_payment_view_tree"/>
+            <field name="act_window" ref="act_unassigned_payment"/>
+        </record>
+        <record model="ir.action.act_window.view"
+            id="act_unassigned_payment_view_form">
+            <field name="sequence" eval="20"/>
+            <field name="view" ref="unassigned_payment_view_form"/>
+            <field name="act_window" ref="act_unassigned_payment"/>
+        </record>
+
+        <!-- Restringir la vista al grupo supervisor -->
+        <record model="ir.action-res.group"
+            id="act_unassigned_payment-group_payment_supervisor">
+            <field name="action" ref="act_unassigned_payment"/>
+            <field name="group" ref="account_payment_methods.group_payment_supervisor"/>
+        </record>
+
+        <!-- Wizard de vinculación -->
+        <record model="ir.ui.view" id="link_unassigned_form_view">
+            <field name="model">sale.unassigned_payment.link.form</field>
+            <field name="type">form</field>
+            <field name="name">link_unassigned_form</field>
+        </record>
+        <record model="ir.action.wizard" id="wizard_link_unassigned">
+            <field name="name">Vincular pago no asignado</field>
+            <field name="wiz_name">sale.unassigned_payment.link</field>
+            <field name="model">sale.unassigned_payment</field>
+        </record>
+        <record model="ir.action-res.group"
+            id="wizard_link_unassigned-group_payment_supervisor">
+            <field name="action" ref="wizard_link_unassigned"/>
+            <field name="group" ref="account_payment_methods.group_payment_supervisor"/>
+        </record>
+
+        <!-- Permisos: supervisor sí, resto no -->
+        <record model="ir.model.access"
+            id="access_unassigned_payment_default">
+            <field name="model"
+                search="[('model', '=', 'sale.unassigned_payment')]"/>
+            <field name="perm_read" eval="False"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_delete" eval="False"/>
+        </record>
+        <record model="ir.model.access"
+            id="access_unassigned_payment_supervisor">
+            <field name="model"
+                search="[('model', '=', 'sale.unassigned_payment')]"/>
+            <field name="group"
+                ref="account_payment_methods.group_payment_supervisor"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_delete" eval="False"/>
+        </record>
+
+        <!-- Menú: Cobros → Pagos no asignados -->
+        <menuitem
+            id="menu_unassigned_payment"
+            name="Pagos no asignados"
+            parent="account_payment_qr.menu_cobros_qr"
+            action="act_unassigned_payment"
+            icon="tryton-warning"
+            sequence="20"/>
+    </data>
+</tryton>

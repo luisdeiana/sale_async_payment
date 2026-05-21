@@ -1,3 +1,4 @@
+import datetime
 import unittest
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
@@ -488,6 +489,96 @@ class TestUserFilterDomain(unittest.TestCase):
             ('shop', 'in', [2]),
             ('create_uid', '=', 7),
         ])
+
+
+class TestUnassignedPayment(unittest.TestCase):
+    """Tests del paso 10: modelo virtual Pagos no asignados."""
+
+    def test_resolve_source_mp(self):
+        """ID en rango MP → ('mp', source_id)."""
+        from sale_async_payment.unassigned_payment import (
+            UnassignedPayment, _MP_OFFSET)
+        source, sid = UnassignedPayment._resolve_source(
+            _MP_OFFSET + 42)
+        self.assertEqual(source, 'mp')
+        self.assertEqual(sid, 42)
+
+    def test_resolve_source_qr(self):
+        """ID en rango QR → ('qr', source_id)."""
+        from sale_async_payment.unassigned_payment import (
+            UnassignedPayment, _QR_OFFSET)
+        source, sid = UnassignedPayment._resolve_source(
+            _QR_OFFSET + 17)
+        self.assertEqual(source, 'qr')
+        self.assertEqual(sid, 17)
+
+    def test_build_async_vals_for_mp_source(self):
+        """Vals para MP: payment_method=mp_link, mp_transaction seteado."""
+        from sale_async_payment.unassigned_payment import UnassignedPayment
+
+        sale_record = MagicMock(id=99)
+        unassigned = MagicMock(
+            source='mp', source_id=7, amount=Decimal('1000'),
+            reference='MP-PAY-XYZ', payer_name='comprador@mail.com',
+            payer_cuit='', statement_line=MagicMock(id=200))
+
+        # Mock _get_source_record para evitar Pool real
+        source_record = MagicMock()
+        source_record.config.journal.id = 5
+        now = datetime.datetime(2026, 5, 21, 10, 0)
+
+        with patch.object(
+                UnassignedPayment, '_get_source_record',
+                return_value=source_record), \
+             patch(
+                'sale_async_payment.unassigned_payment.Transaction'
+             ) as TxnMock:
+            TxnMock.return_value.user = 3
+            vals = UnassignedPayment._build_async_vals(
+                unassigned, sale_record, now)
+
+        self.assertEqual(vals['sale'], 99)
+        self.assertEqual(vals['amount'], Decimal('1000'))
+        self.assertEqual(vals['received_amount'], Decimal('1000'))
+        self.assertEqual(vals['journal'], 5)
+        self.assertEqual(vals['payment_method'], 'mp_link')
+        self.assertEqual(vals['state'], 'confirmed')
+        self.assertEqual(vals['statement_line'], 200)
+        self.assertEqual(vals['mp_transaction'], 7)
+        self.assertEqual(vals['mp_payment_id'], 'MP-PAY-XYZ')
+        self.assertEqual(vals['match_criteria'], 'manual')
+        self.assertEqual(vals['confirmed_by'], 3)
+        self.assertNotIn('qr_detection', vals)
+
+    def test_build_async_vals_for_qr_source(self):
+        """Vals para QR: payment_method=bank_transfer, qr_detection seteado."""
+        from sale_async_payment.unassigned_payment import UnassignedPayment
+
+        sale_record = MagicMock(id=44)
+        unassigned = MagicMock(
+            source='qr', source_id=15, amount=Decimal('800'),
+            reference='BANK-REF-999', payer_name='Juan Pérez',
+            payer_cuit='20-12345678-9', statement_line=None)
+
+        source_record = MagicMock()
+        source_record.config.journal.id = 11
+        now = datetime.datetime(2026, 5, 21, 11, 0)
+
+        with patch.object(
+                UnassignedPayment, '_get_source_record',
+                return_value=source_record), \
+             patch(
+                'sale_async_payment.unassigned_payment.Transaction'
+             ) as TxnMock:
+            TxnMock.return_value.user = 8
+            vals = UnassignedPayment._build_async_vals(
+                unassigned, sale_record, now)
+
+        self.assertEqual(vals['payment_method'], 'bank_transfer')
+        self.assertEqual(vals['qr_detection'], 15)
+        self.assertEqual(vals['bank_reference'], 'BANK-REF-999')
+        self.assertIsNone(vals['statement_line'])
+        self.assertNotIn('mp_transaction', vals)
 
 
 if __name__ == '__main__':

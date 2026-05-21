@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<form col="4">
+    <label name="date"/>
+    <field name="date"/>
+    <label name="source"/>
+    <field name="source"/>
+    <label name="reference"/>
+    <field name="reference" colspan="3"/>
+    <label name="amount"/>
+    <field name="amount"/>
+    <label name="statement_line"/>
+    <field name="statement_line"/>
+    <separator string="Datos del pagador" id="sep_payer" colspan="4"/>
+    <label name="payer_name"/>
+    <field name="payer_name"/>
+    <label name="payer_cuit"/>
+    <field name="payer_cuit"/>
+    <group col="2" colspan="4" id="grp_actions">
+        <button name="link_to_sale" string="Vincular a venta"
+            icon="tryton-launch"/>
+    </group>
+</form>
