@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<form col="4">
+    <label name="payment_method"/>
+    <field name="payment_method"/>
+    <label name="payment_amount"/>
+    <field name="payment_amount"/>
+    <separator string="Métodos habilitados" id="sep_methods" colspan="4"/>
+    <label name="has_mp_link"/>
+    <field name="has_mp_link"/>
+    <label name="has_bank_transfer"/>
+    <field name="has_bank_transfer"/>
+    <label name="has_debin"/>
+    <field name="has_debin"/>
+    <separator string="Notas" id="sep_notes" colspan="4"/>
+    <field name="notes" colspan="4"/>
+</form>

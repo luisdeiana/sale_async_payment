@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<form col="2">
+    <label name="payment_method_label"/>
+    <field name="payment_method_label"/>
+    <label name="amount"/>
+    <field name="amount"/>
+    <label name="payment_url"/>
+    <field name="payment_url" widget="url"/>
+    <separator string="Mensaje" id="sep_msg" colspan="2"/>
+    <field name="message" colspan="2" yexpand="1"/>
+</form>

@@ -1,6 +1,6 @@
 import unittest
 from decimal import Decimal
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 
 class TestAsyncPaymentModel(unittest.TestCase):
@@ -115,6 +115,121 @@ class TestSaleAsyncOverrides(unittest.TestCase):
         blocked, to_cascade = Sale._async_classify_for_cancel([sale])
         self.assertEqual(blocked, [])
         self.assertEqual(set(to_cascade), {ap_p, ap_s})
+
+
+class TestWizardAsyncRegister(unittest.TestCase):
+    """Tests del paso 6: wizard de cobro asíncrono."""
+
+    def test_compute_next_state_partial_returns_start(self):
+        """Si tras registrar pending sigue habiendo residual > 0 → 'start'."""
+        from sale_async_payment.wizard import WizardSalePayment as W
+        # Sale total=1000, paid=0, pending tras registro=400 → residual=600
+        self.assertEqual(
+            W._async_compute_next_state(
+                Decimal('1000'), Decimal('0'), Decimal('400')),
+            'start')
+
+    def test_compute_next_state_total_returns_async_confirm(self):
+        """Si tras registrar pending cubre todo el residual → 'async_confirm'."""
+        from sale_async_payment.wizard import WizardSalePayment as W
+        # 1000 - 0 - 1000 = 0 → cierre
+        self.assertEqual(
+            W._async_compute_next_state(
+                Decimal('1000'), Decimal('0'), Decimal('1000')),
+            'async_confirm')
+        # 1000 - 300 - 700 = 0 → cierre
+        self.assertEqual(
+            W._async_compute_next_state(
+                Decimal('1000'), Decimal('300'), Decimal('700')),
+            'async_confirm')
+
+    def test_validate_method_other_always_allowed(self):
+        """El método 'other' nunca requiere toggle."""
+        from sale_async_payment.wizard import WizardSalePayment as W
+        # No flags y método 'other' → pasa sin UserError
+        W._async_validate_method('other', {})
+
+    def test_validate_method_requires_toggle(self):
+        """mp_link sin toggle habilitado dispara UserError."""
+        from sale_async_payment.wizard import WizardSalePayment as W
+        from trytond.exceptions import UserError
+        with self.assertRaises(UserError):
+            W._async_validate_method('mp_link', {'mp_link': False})
+
+    def test_register_mp_link_creates_transaction_and_links(self):
+        """transition_async_register con mp_link crea mp.transaction y vincula
+        mp_transaction en el async_payment recién creado."""
+        from sale_async_payment.wizard import WizardSalePayment
+
+        # Mocks de Tryton Pool
+        async_payment_cls = MagicMock()
+        new_async = MagicMock(id=42)
+        async_payment_cls.create.return_value = [new_async]
+
+        mp_config_cls = MagicMock()
+        mp_transaction = MagicMock(id=99, payment_url='https://mp.test/link')
+        mp_config_cls.create_checkout_pro.return_value = mp_transaction
+
+        sale_cls = MagicMock()
+        refreshed_sale = MagicMock()
+        refreshed_sale.total_amount = Decimal('1000')
+        refreshed_sale.paid_amount = Decimal('0')
+        refreshed_sale.async_pending_amount = Decimal('1000')
+        sale_cls.return_value = refreshed_sale
+
+        def pool_get(model):
+            return {
+                'sale.async_payment': async_payment_cls,
+                'sale.sale': sale_cls,
+                'account.payment.mp.config': mp_config_cls,
+            }[model]
+
+        pool_mock = MagicMock()
+        pool_mock.get.side_effect = pool_get
+
+        # Wizard instance simulada: los classmethods se llaman a través del
+        # mock como wrappers a la implementación real.
+        wizard = MagicMock(spec=WizardSalePayment)
+        wizard._async_validate_method = (
+            lambda m, f: WizardSalePayment._async_validate_method(m, f))
+        wizard._async_compute_next_state = (
+            lambda t, p, pr: WizardSalePayment._async_compute_next_state(
+                t, p, pr))
+
+        # record (sale original) + forms del wizard
+        sale_original = MagicMock(id=7)
+        sale_original.shop = MagicMock(id=3)
+        wizard.record = sale_original
+
+        form = MagicMock()
+        form.payment_method = 'mp_link'
+        form.payment_amount = Decimal('1000')
+        form.notes = None
+        wizard.async_method_select = form
+
+        journal = MagicMock(id=11, payment_method='mercadopago')
+        wizard.start = MagicMock(journal=journal)
+
+        with patch('sale_async_payment.wizard.Pool', return_value=pool_mock), \
+             patch('sale_async_payment.wizard._get_journal_async_flags',
+                   return_value={'mp_link': True}):
+            next_state = WizardSalePayment.transition_async_register(wizard)
+
+        # Aserts: se creó el async, se llamó create_checkout_pro y se vinculó
+        async_payment_cls.create.assert_called_once()
+        create_vals = async_payment_cls.create.call_args[0][0][0]
+        self.assertEqual(create_vals['sale'], 7)
+        self.assertEqual(create_vals['payment_method'], 'mp_link')
+        self.assertEqual(create_vals['amount'], Decimal('1000'))
+        self.assertEqual(create_vals['state'], 'pending')
+
+        mp_config_cls.create_checkout_pro.assert_called_once_with(
+            sale_original, 'sale.sale')
+        async_payment_cls.write.assert_called_once_with(
+            [new_async], {'mp_transaction': 99})
+
+        # Cobertura total → cierre
+        self.assertEqual(next_state, 'async_confirm')
 
 
 if __name__ == '__main__':
