@@ -47,11 +47,10 @@ class TestAsyncPaymentModel(unittest.TestCase):
         self.assertEqual(AsyncPaymentConfig.default_default_expiration_value(), 48)
         self.assertEqual(AsyncPaymentConfig.default_default_expiration_unit(), 'hours')
 
-    def test_configuration_line_defaults(self):
-        """La línea de config tiene defaults razonables."""
+    def test_configuration_line_default_unit_empty(self):
+        """expiration_unit por defecto vacío (heredará del default global)."""
         from sale_async_payment.configuration import AsyncPaymentConfigLine
-        self.assertEqual(AsyncPaymentConfigLine.default_expiration_value(), 48)
-        self.assertEqual(AsyncPaymentConfigLine.default_expiration_unit(), 'hours')
+        self.assertEqual(AsyncPaymentConfigLine.default_expiration_unit(), '')
 
     def test_compute_expiration_date_uses_default_when_no_line(self):
         """compute_expiration_date sin líneas usa el default."""
@@ -60,17 +59,19 @@ class TestAsyncPaymentModel(unittest.TestCase):
         config.lines = []
         config.default_expiration_value = 24
         config.default_expiration_unit = 'hours'
+        journal = MagicMock(id=11)
         before = datetime.datetime.now()
-        result = AsyncPaymentConfig.compute_expiration_date(config, 'bank_transfer')
+        result = AsyncPaymentConfig.compute_expiration_date(config, journal)
         after = datetime.datetime.now()
         self.assertGreaterEqual(result, before + datetime.timedelta(hours=24))
         self.assertLessEqual(result, after + datetime.timedelta(hours=24))
 
-    def test_compute_expiration_date_uses_line_when_matches(self):
-        """compute_expiration_date con línea coincidente usa esa línea."""
+    def test_compute_expiration_date_uses_line_when_journal_matches(self):
+        """compute_expiration_date con línea para el journal usa esa línea."""
         from sale_async_payment.configuration import AsyncPaymentConfig
+        journal = MagicMock(id=11)
         line = MagicMock()
-        line.payment_method = 'mp_link'
+        line.journal = journal
         line.expiration_value = 72
         line.expiration_unit = 'hours'
         config = MagicMock()
@@ -78,10 +79,30 @@ class TestAsyncPaymentModel(unittest.TestCase):
         config.default_expiration_value = 48
         config.default_expiration_unit = 'hours'
         before = datetime.datetime.now()
-        result = AsyncPaymentConfig.compute_expiration_date(config, 'mp_link')
+        result = AsyncPaymentConfig.compute_expiration_date(config, journal)
         after = datetime.datetime.now()
         self.assertGreaterEqual(result, before + datetime.timedelta(hours=72))
         self.assertLessEqual(result, after + datetime.timedelta(hours=72))
+
+    def test_compute_expiration_date_falls_back_when_journal_not_matched(self):
+        """Si hay líneas pero ninguna para el journal recibido, usa el default."""
+        from sale_async_payment.configuration import AsyncPaymentConfig
+        other_journal = MagicMock(id=34)
+        line = MagicMock()
+        line.journal = other_journal
+        line.expiration_value = 72
+        line.expiration_unit = 'hours'
+        config = MagicMock()
+        config.lines = [line]
+        config.default_expiration_value = 24
+        config.default_expiration_unit = 'hours'
+        target_journal = MagicMock(id=99)
+        before = datetime.datetime.now()
+        result = AsyncPaymentConfig.compute_expiration_date(
+            config, target_journal)
+        after = datetime.datetime.now()
+        self.assertGreaterEqual(result, before + datetime.timedelta(hours=24))
+        self.assertLessEqual(result, after + datetime.timedelta(hours=24))
 
     def test_compute_expiration_date_days_unit(self):
         """compute_expiration_date con unidad 'days' convierte correctamente."""
@@ -90,27 +111,173 @@ class TestAsyncPaymentModel(unittest.TestCase):
         config.lines = []
         config.default_expiration_value = 2
         config.default_expiration_unit = 'days'
+        journal = MagicMock(id=11)
         before = datetime.datetime.now()
-        result = AsyncPaymentConfig.compute_expiration_date(config, 'other')
+        result = AsyncPaymentConfig.compute_expiration_date(config, journal)
         after = datetime.datetime.now()
         self.assertGreaterEqual(result, before + datetime.timedelta(days=2))
         self.assertLessEqual(result, after + datetime.timedelta(days=2))
 
 
-class TestAsyncToggles(unittest.TestCase):
-    """Tests para los toggles enable_async_* en configs MP y QR (paso 4)."""
+class TestAsyncCapableMethods(unittest.TestCase):
+    """Tests para la lista blanca ASYNC_CAPABLE_METHODS y derivación de método."""
 
-    def test_mp_config_async_defaults_are_false(self):
-        """enable_async_transfer y enable_async_link en config MP son False por defecto."""
-        from account_payment_mp.configuration import Configuration
-        self.assertFalse(Configuration.default_enable_async_transfer())
-        self.assertFalse(Configuration.default_enable_async_link())
+    def test_async_capable_methods_includes_initial_two(self):
+        """La lista blanca inicial incluye mercadopago y bank_polling."""
+        from sale_async_payment.async_payment import ASYNC_CAPABLE_METHODS
+        self.assertIn('mercadopago', ASYNC_CAPABLE_METHODS)
+        self.assertIn('bank_polling', ASYNC_CAPABLE_METHODS)
 
-    def test_qr_config_async_defaults_are_false(self):
-        """enable_async_transfer y enable_async_bank_transfer en config QR son False por defecto."""
-        from account_payment_qr.configuration import Configuration
-        self.assertFalse(Configuration.default_enable_async_transfer())
-        self.assertFalse(Configuration.default_enable_async_bank_transfer())
+    def test_journal_to_async_method_mapping(self):
+        """El mapeo journal.payment_method → método async es consistente
+        con PAYMENT_METHODS."""
+        from sale_async_payment.async_payment import (
+            ASYNC_CAPABLE_METHODS, JOURNAL_TO_ASYNC_METHOD, PAYMENT_METHODS)
+        method_keys = {m[0] for m in PAYMENT_METHODS}
+        for journal_pm in ASYNC_CAPABLE_METHODS:
+            self.assertIn(journal_pm, JOURNAL_TO_ASYNC_METHOD,
+                f"Falta mapeo para journal.payment_method '{journal_pm}'")
+            self.assertIn(JOURNAL_TO_ASYNC_METHOD[journal_pm], method_keys,
+                f"El método async derivado para '{journal_pm}' no está en "
+                f"PAYMENT_METHODS")
+
+    def test_derive_async_method_for_mp(self):
+        """Journal mercadopago → método 'mp_link'."""
+        from sale_async_payment.wizard import _derive_async_method
+        journal = MagicMock(payment_method='mercadopago')
+        self.assertEqual(_derive_async_method(journal), 'mp_link')
+
+    def test_derive_async_method_for_bank(self):
+        """Journal bank_polling → método 'bank_transfer'."""
+        from sale_async_payment.wizard import _derive_async_method
+        journal = MagicMock(payment_method='bank_polling')
+        self.assertEqual(_derive_async_method(journal), 'bank_transfer')
+
+    def test_derive_async_method_fallback_other(self):
+        """Journal con payment_method sin mapeo → 'other'."""
+        from sale_async_payment.wizard import _derive_async_method
+        journal = MagicMock(payment_method='unknown_method')
+        self.assertEqual(_derive_async_method(journal), 'other')
+
+
+class TestConfigLineJournalValidation(unittest.TestCase):
+    """Tests para validación de journal en sale.async_payment.config.line."""
+
+    def test_check_journal_async_capable_accepts_mp(self):
+        """Journal con payment_method='mercadopago' pasa la validación."""
+        from sale_async_payment.configuration import AsyncPaymentConfigLine
+        line = MagicMock()
+        line.journal = MagicMock(payment_method='mercadopago', name='MP JNL')
+        AsyncPaymentConfigLine.check_journal_async_capable(line)
+
+    def test_check_journal_async_capable_accepts_bank(self):
+        """Journal con payment_method='bank_polling' pasa la validación."""
+        from sale_async_payment.configuration import AsyncPaymentConfigLine
+        line = MagicMock()
+        line.journal = MagicMock(payment_method='bank_polling', name='BNA')
+        AsyncPaymentConfigLine.check_journal_async_capable(line)
+
+    def test_check_journal_async_capable_rejects_none(self):
+        """Journal con payment_method='none' dispara UserError descriptivo."""
+        from sale_async_payment.configuration import AsyncPaymentConfigLine
+        from trytond.exceptions import UserError
+        line = MagicMock()
+        line.journal = MagicMock(payment_method='none', name='Caja Efectivo')
+        with self.assertRaises(UserError) as ctx:
+            AsyncPaymentConfigLine.check_journal_async_capable(line)
+        self.assertIn('Caja Efectivo', str(ctx.exception))
+        self.assertIn('no admite cobros asíncronos', str(ctx.exception))
+
+    def test_check_journal_async_capable_rejects_unknown(self):
+        """Journal con payment_method desconocido dispara UserError."""
+        from sale_async_payment.configuration import AsyncPaymentConfigLine
+        from trytond.exceptions import UserError
+        line = MagicMock()
+        line.journal = MagicMock(payment_method='openpay', name='Openpay JNL')
+        with self.assertRaises(UserError):
+            AsyncPaymentConfigLine.check_journal_async_capable(line)
+
+    def test_check_journal_async_capable_ignores_empty_journal(self):
+        """Si no hay journal seteado, no se valida (otro check exigirá required=True)."""
+        from sale_async_payment.configuration import AsyncPaymentConfigLine
+        line = MagicMock()
+        line.journal = None
+        AsyncPaymentConfigLine.check_journal_async_capable(line)
+
+
+class TestHasAsyncConfig(unittest.TestCase):
+    """Tests para _journal_has_async_config: el botón async solo aparece
+    si el journal tiene línea configurada."""
+
+    def test_no_journal_returns_false(self):
+        from sale_async_payment.wizard import _journal_has_async_config
+        self.assertFalse(_journal_has_async_config(None))
+
+    def test_journal_with_non_capable_method_returns_false(self):
+        """Journal cuyo payment_method NO está en ASYNC_CAPABLE_METHODS → False
+        sin siquiera consultar config.line."""
+        from sale_async_payment.wizard import _journal_has_async_config
+        journal = MagicMock(payment_method='none', id=99)
+        self.assertFalse(_journal_has_async_config(journal))
+
+    def test_capable_method_without_config_line_returns_false(self):
+        """Journal con payment_method capable pero sin línea en config.line
+        → False (la grilla es la fuente de la verdad)."""
+        from sale_async_payment import wizard as wiz
+        journal = MagicMock(payment_method='mercadopago', id=11)
+        config_line_cls = MagicMock()
+        config_line_cls.search.return_value = []
+        pool_mock = MagicMock()
+        pool_mock.get.return_value = config_line_cls
+        with patch.object(wiz, 'Pool', return_value=pool_mock):
+            self.assertFalse(wiz._journal_has_async_config(journal))
+        config_line_cls.search.assert_called_once_with(
+            [('journal', '=', 11)], limit=1)
+
+    def test_capable_method_with_config_line_returns_true(self):
+        """Journal con payment_method capable + línea configurada → True."""
+        from sale_async_payment import wizard as wiz
+        journal = MagicMock(payment_method='bank_polling', id=34)
+        config_line_cls = MagicMock()
+        config_line_cls.search.return_value = [MagicMock(id=1)]
+        pool_mock = MagicMock()
+        pool_mock.get.return_value = config_line_cls
+        with patch.object(wiz, 'Pool', return_value=pool_mock):
+            self.assertTrue(wiz._journal_has_async_config(journal))
+
+
+class TestSalePaymentFormAsyncOptions(unittest.TestCase):
+    """Tests para SalePaymentForm.on_change_with_has_async_options."""
+
+    def test_no_journal_returns_false(self):
+        from sale_async_payment.wizard import SalePaymentForm
+        form = MagicMock()
+        form.journal = None
+        self.assertFalse(
+            SalePaymentForm.on_change_with_has_async_options(form))
+
+    def test_journal_without_line_returns_false(self):
+        """on_change_with_has_async_options delega en _journal_has_async_config
+        — si no hay línea, el botón asíncrono no aparece."""
+        from sale_async_payment.wizard import SalePaymentForm
+        form = MagicMock()
+        form.journal = MagicMock(payment_method='mercadopago', id=11)
+        with patch(
+                'sale_async_payment.wizard._journal_has_async_config',
+                return_value=False) as has_mock:
+            result = SalePaymentForm.on_change_with_has_async_options(form)
+        self.assertFalse(result)
+        has_mock.assert_called_once_with(form.journal)
+
+    def test_journal_with_line_returns_true(self):
+        from sale_async_payment.wizard import SalePaymentForm
+        form = MagicMock()
+        form.journal = MagicMock(payment_method='bank_polling', id=34)
+        with patch(
+                'sale_async_payment.wizard._journal_has_async_config',
+                return_value=True):
+            self.assertTrue(
+                SalePaymentForm.on_change_with_has_async_options(form))
 
 
 class TestSaleAsyncOverrides(unittest.TestCase):
@@ -192,22 +359,31 @@ class TestWizardAsyncRegister(unittest.TestCase):
                 Decimal('1000'), Decimal('300'), Decimal('700')),
             'async_confirm')
 
-    def test_validate_method_other_always_allowed(self):
-        """El método 'other' nunca requiere toggle."""
-        from sale_async_payment.wizard import WizardSalePayment as W
-        # No flags y método 'other' → pasa sin UserError
-        W._async_validate_method('other', {})
-
-    def test_validate_method_requires_toggle(self):
-        """mp_link sin toggle habilitado dispara UserError."""
+    def test_validate_journal_raises_without_config_line(self):
+        """_async_validate_journal dispara UserError si no hay línea
+        en config.line para el journal."""
         from sale_async_payment.wizard import WizardSalePayment as W
         from trytond.exceptions import UserError
-        with self.assertRaises(UserError):
-            W._async_validate_method('mp_link', {'mp_link': False})
+        journal = MagicMock(name='Caja', payment_method='none', id=99)
+        with patch(
+                'sale_async_payment.wizard._journal_has_async_config',
+                return_value=False):
+            with self.assertRaises(UserError):
+                W._async_validate_journal(journal)
+
+    def test_validate_journal_passes_when_has_config_line(self):
+        """_async_validate_journal pasa sin error si _journal_has_async_config
+        retorna True."""
+        from sale_async_payment.wizard import WizardSalePayment as W
+        journal = MagicMock(name='MP', payment_method='mercadopago', id=11)
+        with patch(
+                'sale_async_payment.wizard._journal_has_async_config',
+                return_value=True):
+            W._async_validate_journal(journal)  # No raise
 
     def test_register_mp_link_creates_transaction_and_links(self):
-        """transition_async_register con mp_link crea mp.transaction y vincula
-        mp_transaction en el async_payment recién creado."""
+        """transition_async_register con journal MP deriva 'mp_link', crea
+        mp.transaction y vincula mp_transaction en el async_payment."""
         from sale_async_payment.wizard import WizardSalePayment
 
         # Mocks de Tryton Pool
@@ -243,11 +419,9 @@ class TestWizardAsyncRegister(unittest.TestCase):
         pool_mock = MagicMock()
         pool_mock.get.side_effect = pool_get
 
-        # Wizard instance simulada: los classmethods se llaman a través del
-        # mock como wrappers a la implementación real.
         wizard = MagicMock(spec=WizardSalePayment)
-        wizard._async_validate_method = (
-            lambda m, f: WizardSalePayment._async_validate_method(m, f))
+        wizard._async_validate_journal = (
+            lambda j: WizardSalePayment._async_validate_journal(j))
         wizard._async_compute_next_state = (
             lambda t, p, pr: WizardSalePayment._async_compute_next_state(
                 t, p, pr))
@@ -258,7 +432,7 @@ class TestWizardAsyncRegister(unittest.TestCase):
         wizard.record = sale_original
 
         form = MagicMock()
-        form.payment_method = 'mp_link'
+        # El form ya NO tiene payment_method — se deriva del journal
         form.payment_amount = Decimal('1000')
         form.notes = None
         wizard.async_method_select = form
@@ -267,16 +441,17 @@ class TestWizardAsyncRegister(unittest.TestCase):
         wizard.start = MagicMock(journal=journal)
 
         with patch('sale_async_payment.wizard.Pool', return_value=pool_mock), \
-             patch('sale_async_payment.wizard._get_journal_async_flags',
-                   return_value={'mp_link': True}):
+             patch('sale_async_payment.wizard._journal_has_async_config',
+                   return_value=True):
             next_state = WizardSalePayment.transition_async_register(wizard)
 
-        # Aserts: se creó el async, se llamó create_checkout_pro y se vinculó
+        # Aserts: método derivado del journal, async creado y mp_transaction vinculada
         async_payment_cls.create.assert_called_once()
         create_vals = async_payment_cls.create.call_args[0][0][0]
         self.assertEqual(create_vals['sale'], 7)
         self.assertEqual(create_vals['payment_method'], 'mp_link')
         self.assertEqual(create_vals['amount'], Decimal('1000'))
+        self.assertEqual(create_vals['journal'], 11)
         self.assertEqual(create_vals['state'], 'pending')
 
         mp_config_cls.create_checkout_pro.assert_called_once_with(
@@ -286,6 +461,70 @@ class TestWizardAsyncRegister(unittest.TestCase):
 
         # Cobertura total → cierre
         self.assertEqual(next_state, 'async_confirm')
+
+    def test_register_bank_polling_derives_bank_transfer(self):
+        """transition_async_register con journal bank_polling deriva
+        'bank_transfer' y NO llama a create_checkout_pro."""
+        from sale_async_payment.wizard import WizardSalePayment
+
+        async_payment_cls = MagicMock()
+        new_async = MagicMock(id=43)
+        async_payment_cls.create.return_value = [new_async]
+
+        sale_cls = MagicMock()
+        refreshed_sale = MagicMock()
+        refreshed_sale.total_amount = Decimal('500')
+        refreshed_sale.paid_amount = Decimal('0')
+        refreshed_sale.async_pending_amount = Decimal('500')
+        sale_cls.return_value = refreshed_sale
+
+        async_config_cls = MagicMock()
+        async_config_instance = MagicMock()
+        async_config_instance.compute_expiration_date.return_value = (
+            datetime.datetime(2026, 6, 1, 12, 0))
+        async_config_cls.return_value = async_config_instance
+
+        mp_config_cls = MagicMock()
+
+        def pool_get(model):
+            return {
+                'sale.async_payment': async_payment_cls,
+                'sale.sale': sale_cls,
+                'sale.async_payment.config': async_config_cls,
+                'account.payment.mp.config': mp_config_cls,
+            }[model]
+
+        pool_mock = MagicMock()
+        pool_mock.get.side_effect = pool_get
+
+        wizard = MagicMock(spec=WizardSalePayment)
+        wizard._async_validate_journal = (
+            lambda j: WizardSalePayment._async_validate_journal(j))
+        wizard._async_compute_next_state = (
+            lambda t, p, pr: WizardSalePayment._async_compute_next_state(
+                t, p, pr))
+
+        sale_original = MagicMock(id=8)
+        sale_original.shop = None
+        wizard.record = sale_original
+
+        form = MagicMock()
+        form.payment_amount = Decimal('500')
+        form.notes = 'Espera transferencia BNA'
+        wizard.async_method_select = form
+
+        journal = MagicMock(id=34, payment_method='bank_polling')
+        wizard.start = MagicMock(journal=journal)
+
+        with patch('sale_async_payment.wizard.Pool', return_value=pool_mock), \
+             patch('sale_async_payment.wizard._journal_has_async_config',
+                   return_value=True):
+            WizardSalePayment.transition_async_register(wizard)
+
+        create_vals = async_payment_cls.create.call_args[0][0][0]
+        self.assertEqual(create_vals['payment_method'], 'bank_transfer')
+        # Sin link MP → no se llama a create_checkout_pro
+        mp_config_cls.create_checkout_pro.assert_not_called()
 
 
 class TestAsyncConfirmDiff(unittest.TestCase):
