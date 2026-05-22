@@ -1,14 +1,13 @@
 <?xml version="1.0"?>
 <form col="4">
-    <label name="payment_method"/>
-    <field name="payment_method"/>
+    <label name="journal"/>
+    <field name="journal"/>
+    <label name="journal_payment_method"/>
+    <field name="journal_payment_method"/>
+    <label name="async_method_label"/>
+    <field name="async_method_label"/>
     <label name="payment_amount"/>
     <field name="payment_amount"/>
-    <separator string="Métodos habilitados" id="sep_methods" colspan="4"/>
-    <label name="has_mp_link"/>
-    <field name="has_mp_link"/>
-    <label name="has_bank_transfer"/>
-    <field name="has_bank_transfer"/>
     <separator string="Notas" id="sep_notes" colspan="4"/>
     <field name="notes" colspan="4"/>
 </form>
