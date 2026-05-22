@@ -3,8 +3,7 @@
     <label name="journal"/>
     <field name="journal"/>
     <label name="payment_method"/>
-    <field name="payment_method"
-        readonly="Eval('payment_method_readonly', False)"/>
+    <field name="payment_method"/>
     <label name="payment_amount"/>
     <field name="payment_amount"/>
     <label name="notes"/>

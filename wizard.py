@@ -56,6 +56,8 @@ class AsyncMethodSelectForm(ModelView):
         help='Diario de cobro asíncrono (viene del wizard de pago).')
     payment_method = fields.Selection(
         'get_payment_method_selection', 'Método', required=True, sort=False,
+        states={'readonly': Eval('payment_method_readonly', False)},
+        depends=['payment_method_readonly'],
         help='Método de cobro asíncrono. Las opciones disponibles '
              'dependen del diario.')
     payment_method_readonly = fields.Function(
