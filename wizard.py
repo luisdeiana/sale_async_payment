@@ -7,8 +7,7 @@ from trytond.pyson import Bool, Eval
 from trytond.wizard import Button, StateTransition, StateView
 
 from .async_payment import (
-    ASYNC_CAPABLE_METHODS, ASYNC_CAPABLE_METHOD_LABELS,
-    JOURNAL_TO_ASYNC_METHOD, PAYMENT_METHODS)
+    ASYNC_CAPABLE_METHODS, JOURNAL_ASYNC_METHODS, PAYMENT_METHODS)
 
 
 def _journal_has_async_config(journal):
@@ -26,11 +25,12 @@ def _journal_has_async_config(journal):
     return bool(lines)
 
 
-def _derive_async_method(journal):
-    # Mapea journal.payment_method al payment_method del async_payment.
-    # Sin mapeo definido, cae a 'other' (registro manual sin auto-confirm).
+def _async_methods_for_journal(journal):
+    # Lista de payment_method permitidos para este journal, según
+    # JOURNAL_ASYNC_METHODS. Sin journal o sin mapeo → lista vacía
+    # (el cajero verá un Selection vacío y la transición fallará).
     pm = getattr(journal, 'payment_method', None) if journal else None
-    return JOURNAL_TO_ASYNC_METHOD.get(pm, 'other')
+    return list(JOURNAL_ASYNC_METHODS.get(pm, []))
 
 
 class SalePaymentForm(metaclass=PoolMeta):
@@ -54,15 +54,28 @@ class AsyncMethodSelectForm(ModelView):
         'account.statement.journal', 'Diario',
         readonly=True,
         help='Diario de cobro asíncrono (viene del wizard de pago).')
-    journal_payment_method = fields.Char(
-        'Método del diario', readonly=True)
-    async_method_label = fields.Char(
-        'Método asíncrono', readonly=True,
-        help='Tipo de cobro asíncrono que se va a registrar, '
-             'derivado del método de pago del diario.')
+    payment_method = fields.Selection(
+        'get_payment_method_selection', 'Método', required=True, sort=False,
+        help='Método de cobro asíncrono. Las opciones disponibles '
+             'dependen del diario.')
+    payment_method_readonly = fields.Function(
+        fields.Boolean('Método fijo'),
+        'on_change_with_payment_method_readonly')
     payment_amount = fields.Numeric(
-        'Monto a registrar', digits=(16, 2), required=True)
+        'Monto', digits=(16, 2), required=True)
     notes = fields.Text('Notas')
+
+    @classmethod
+    def get_payment_method_selection(cls):
+        # El Selection global incluye todos los métodos posibles;
+        # el filtrado por journal se hace vía on_change y validación
+        # en transition_async_register.
+        return list(PAYMENT_METHODS)
+
+    @fields.depends('journal')
+    def on_change_with_payment_method_readonly(self, name=None):
+        methods = _async_methods_for_journal(self.journal)
+        return len(methods) <= 1
 
 
 class AsyncConfirmForm(ModelView):
@@ -119,15 +132,12 @@ class WizardSalePayment(metaclass=PoolMeta):
     def default_async_method_select(self, fields):
         journal = self.start.journal
         amount = self.start.payment_amount or Decimal('0.0')
-        derived = _derive_async_method(journal)
-        async_label = dict(PAYMENT_METHODS).get(derived, derived)
-        journal_pm = getattr(journal, 'payment_method', None) if journal else None
-        journal_pm_label = ASYNC_CAPABLE_METHOD_LABELS.get(
-            journal_pm, journal_pm or '')
+        methods = _async_methods_for_journal(journal)
+        default_method = methods[0] if methods else None
         return {
             'journal': journal.id if journal else None,
-            'journal_payment_method': journal_pm_label,
-            'async_method_label': async_label,
+            'payment_method': default_method,
+            'payment_method_readonly': len(methods) <= 1,
             'payment_amount': amount,
             'notes': None,
         }
@@ -167,13 +177,26 @@ class WizardSalePayment(metaclass=PoolMeta):
             raise UserError('El monto debe ser mayor a cero.')
 
         self._async_validate_journal(journal)
-        method = _derive_async_method(journal)
+
+        method = form.payment_method
+        allowed = _async_methods_for_journal(journal)
+        if not method or method not in allowed:
+            raise UserError(
+                "El método '%s' no está habilitado para el diario '%s'. "
+                "Opciones válidas: %s."
+                % (method or '-',
+                   getattr(journal, 'name', '?'),
+                   ', '.join(allowed) if allowed else '(ninguna)'))
 
         shop_id = sale.shop.id if getattr(sale, 'shop', None) else None
+        company_id = (
+            sale.company.id if getattr(sale, 'company', None)
+            else None)
         Config = pool.get('sale.async_payment.config')
         config = Config(1)
         expiration_date = config.compute_expiration_date(journal)
         vals = {
+            'company': company_id,
             'sale': sale.id,
             'amount': amount,
             'journal': journal.id,

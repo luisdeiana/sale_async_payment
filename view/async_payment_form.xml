@@ -40,6 +40,8 @@
     <field name="confirmed_by"/>
     <label name="confirmed_date"/>
     <field name="confirmed_date"/>
+    <label name="company"/>
+    <field name="company"/>
     <separator string="Notas" colspan="4" id="sep_notes"/>
     <label name="notes"/>
     <field name="notes" colspan="3"/>

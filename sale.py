@@ -93,3 +93,14 @@ class Sale(metaclass=PoolMeta):
             AsyncPayment.write(to_cascade, {'state': 'cancelled'})
 
         super().cancel(sales)
+
+    @classmethod
+    def copy(cls, sales, default=None):
+        # Al duplicar una venta no se arrastran los cobros asíncronos
+        # (la copia arranca limpia y debe registrar sus propios cobros).
+        if default is None:
+            default = {}
+        else:
+            default = default.copy()
+        default.setdefault('async_payments', None)
+        return super().copy(sales, default=default)

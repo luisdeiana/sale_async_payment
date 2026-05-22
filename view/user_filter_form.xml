@@ -2,6 +2,8 @@
 <form col="2">
     <label name="user"/>
     <field name="user"/>
+    <label name="company"/>
+    <field name="company"/>
     <label name="only_own"/>
     <field name="only_own"/>
     <separator string="Sucursales visibles" id="sep_shops" colspan="2"/>

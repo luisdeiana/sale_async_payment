@@ -35,16 +35,17 @@ PAYMENT_METHODS = [
 # Lista blanca de payment_methods de account.statement.journal que
 # admiten cobros asíncronos. Para sumar un medio de pago nuevo
 # (openpay/viumi/etc.) agregarlo acá Y mapearlo en
-# JOURNAL_TO_ASYNC_METHOD.
+# JOURNAL_ASYNC_METHODS.
 ASYNC_CAPABLE_METHODS = ('mercadopago', 'bank_polling')
 
-# Mapeo journal.payment_method → payment_method derivado del async.
-# Lo usa el wizard al crear el async_payment. Cuando un mismo journal
-# admite varios sub-métodos (ej: MP link vs QR estático), se elige el
-# más común para cobros asíncronos.
-JOURNAL_TO_ASYNC_METHOD = {
-    'mercadopago': 'mp_link',
-    'bank_polling': 'bank_transfer',
+# Métodos asíncronos ofrecidos por cada journal.payment_method.
+# El cajero elige cuál usar en el wizard. Cuando se sume un medio
+# nuevo (openpay/viumi/etc.) agregar su entrada acá. Si la lista
+# tiene un solo método, el wizard lo pre-selecciona y lo deja
+# readonly.
+JOURNAL_ASYNC_METHODS = {
+    'mercadopago': ['mp_link', 'bank_transfer'],
+    'bank_polling': ['bank_transfer'],
 }
 
 # Etiquetas legibles para mensajes de error sobre métodos compatibles
@@ -74,6 +75,10 @@ class AsyncPayment(Workflow, ModelSQL, ModelView):
     "Cobro asíncrono"
     __name__ = 'sale.async_payment'
 
+    company = fields.Many2One(
+        'company.company', 'Empresa', required=True, ondelete='RESTRICT',
+        domain=[('id', 'in', Eval('context', {}).get('companies', []))],
+        states={'readonly': Eval('state') != 'pending'})
     sale = fields.Many2One(
         'sale.sale', 'Venta', required=True, ondelete='RESTRICT',
         states={'readonly': Eval('state') != 'pending'})
@@ -204,6 +209,30 @@ class AsyncPayment(Workflow, ModelSQL, ModelView):
     def default_match_criteria():
         return ''
 
+    @staticmethod
+    def default_company():
+        return Transaction().context.get('company')
+
+    @classmethod
+    def __register__(cls, module_name):
+        # Backfill `company` desde sale.company para filas previas a la
+        # introducción del campo (required=True). Se ejecuta antes de
+        # que Tryton aplique constraints sobre la columna recién creada.
+        pool = Pool()
+        table_h = cls.__table_handler__(module_name)
+        column_missing = not table_h.column_exist('company')
+        super().__register__(module_name)
+        if column_missing:
+            cursor = Transaction().connection.cursor()
+            ap = cls.__table__()
+            Sale = pool.get('sale.sale')
+            sale_t = Sale.__table__()
+            cursor.execute(*ap.update(
+                columns=[ap.company],
+                values=[sale_t.company],
+                from_=[sale_t],
+                where=(ap.sale == sale_t.id) & (ap.company == None)))
+
     def get_expiration_date_date(self, name):
         if self.expiration_date:
             return self.expiration_date.date()
@@ -238,11 +267,14 @@ class AsyncPayment(Workflow, ModelSQL, ModelView):
         pool = Pool()
         UserFilter = pool.get('sale.async_payment.user_filter')
         user_id = Transaction().user
+        company_id = Transaction().context.get('company')
         is_supervisor = _user_is_payment_supervisor()
         user_filter = None
         if user_id != 0 and not is_supervisor:
-            filters = UserFilter.search(
-                [('user', '=', user_id)], limit=1)
+            uf_domain = [('user', '=', user_id)]
+            if company_id:
+                uf_domain.append(('company', '=', company_id))
+            filters = UserFilter.search(uf_domain, limit=1)
             if filters:
                 user_filter = filters[0]
         extra = cls._get_user_filter_domain(

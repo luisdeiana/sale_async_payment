@@ -128,36 +128,46 @@ class TestAsyncCapableMethods(unittest.TestCase):
         self.assertIn('mercadopago', ASYNC_CAPABLE_METHODS)
         self.assertIn('bank_polling', ASYNC_CAPABLE_METHODS)
 
-    def test_journal_to_async_method_mapping(self):
-        """El mapeo journal.payment_method → método async es consistente
-        con PAYMENT_METHODS."""
+    def test_journal_async_methods_mapping(self):
+        """JOURNAL_ASYNC_METHODS cubre todos los ASYNC_CAPABLE_METHODS y
+        cada método listado existe en PAYMENT_METHODS."""
         from sale_async_payment.async_payment import (
-            ASYNC_CAPABLE_METHODS, JOURNAL_TO_ASYNC_METHOD, PAYMENT_METHODS)
+            ASYNC_CAPABLE_METHODS, JOURNAL_ASYNC_METHODS, PAYMENT_METHODS)
         method_keys = {m[0] for m in PAYMENT_METHODS}
         for journal_pm in ASYNC_CAPABLE_METHODS:
-            self.assertIn(journal_pm, JOURNAL_TO_ASYNC_METHOD,
-                f"Falta mapeo para journal.payment_method '{journal_pm}'")
-            self.assertIn(JOURNAL_TO_ASYNC_METHOD[journal_pm], method_keys,
-                f"El método async derivado para '{journal_pm}' no está en "
-                f"PAYMENT_METHODS")
+            self.assertIn(journal_pm, JOURNAL_ASYNC_METHODS,
+                f"Falta entrada para journal.payment_method '{journal_pm}'")
+            for m in JOURNAL_ASYNC_METHODS[journal_pm]:
+                self.assertIn(m, method_keys,
+                    f"El método '{m}' para '{journal_pm}' no está en "
+                    f"PAYMENT_METHODS")
 
-    def test_derive_async_method_for_mp(self):
-        """Journal mercadopago → método 'mp_link'."""
-        from sale_async_payment.wizard import _derive_async_method
+    def test_async_methods_for_journal_mp(self):
+        """Journal mercadopago → ofrece mp_link y bank_transfer."""
+        from sale_async_payment.wizard import _async_methods_for_journal
         journal = MagicMock(payment_method='mercadopago')
-        self.assertEqual(_derive_async_method(journal), 'mp_link')
+        self.assertEqual(
+            _async_methods_for_journal(journal),
+            ['mp_link', 'bank_transfer'])
 
-    def test_derive_async_method_for_bank(self):
-        """Journal bank_polling → método 'bank_transfer'."""
-        from sale_async_payment.wizard import _derive_async_method
+    def test_async_methods_for_journal_bank(self):
+        """Journal bank_polling → único método bank_transfer."""
+        from sale_async_payment.wizard import _async_methods_for_journal
         journal = MagicMock(payment_method='bank_polling')
-        self.assertEqual(_derive_async_method(journal), 'bank_transfer')
+        self.assertEqual(
+            _async_methods_for_journal(journal),
+            ['bank_transfer'])
 
-    def test_derive_async_method_fallback_other(self):
-        """Journal con payment_method sin mapeo → 'other'."""
-        from sale_async_payment.wizard import _derive_async_method
+    def test_async_methods_for_journal_unknown_empty(self):
+        """Journal sin mapeo → lista vacía."""
+        from sale_async_payment.wizard import _async_methods_for_journal
         journal = MagicMock(payment_method='unknown_method')
-        self.assertEqual(_derive_async_method(journal), 'other')
+        self.assertEqual(_async_methods_for_journal(journal), [])
+
+    def test_async_methods_for_journal_none(self):
+        """Sin journal → lista vacía."""
+        from sale_async_payment.wizard import _async_methods_for_journal
+        self.assertEqual(_async_methods_for_journal(None), [])
 
 
 class TestConfigLineJournalValidation(unittest.TestCase):
@@ -432,7 +442,8 @@ class TestWizardAsyncRegister(unittest.TestCase):
         wizard.record = sale_original
 
         form = MagicMock()
-        # El form ya NO tiene payment_method — se deriva del journal
+        # El cajero elige el método entre los disponibles para el diario
+        form.payment_method = 'mp_link'
         form.payment_amount = Decimal('1000')
         form.notes = None
         wizard.async_method_select = form
@@ -509,6 +520,7 @@ class TestWizardAsyncRegister(unittest.TestCase):
         wizard.record = sale_original
 
         form = MagicMock()
+        form.payment_method = 'bank_transfer'
         form.payment_amount = Decimal('500')
         form.notes = 'Espera transferencia BNA'
         wizard.async_method_select = form

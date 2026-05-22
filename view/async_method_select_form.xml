@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
-<form col="4">
+<form col="2">
     <label name="journal"/>
     <field name="journal"/>
-    <label name="journal_payment_method"/>
-    <field name="journal_payment_method"/>
-    <label name="async_method_label"/>
-    <field name="async_method_label"/>
+    <label name="payment_method"/>
+    <field name="payment_method"
+        readonly="Eval('payment_method_readonly', False)"/>
     <label name="payment_amount"/>
     <field name="payment_amount"/>
-    <separator string="Notas" id="sep_notes" colspan="4"/>
-    <field name="notes" colspan="4"/>
+    <label name="notes"/>
+    <field name="notes"/>
+    <field name="payment_method_readonly" invisible="1"/>
 </form>

@@ -3,6 +3,8 @@ import datetime
 from trytond.exceptions import UserError
 from trytond.model import (
     ModelSingleton, ModelSQL, ModelView, Unique, fields, sequence_ordered)
+from trytond.pyson import Eval
+from trytond.transaction import Transaction
 
 from .async_payment import (
     ASYNC_CAPABLE_METHODS, ASYNC_CAPABLE_METHOD_LABELS)
@@ -140,6 +142,9 @@ class AsyncPaymentUserFilter(ModelSQL, ModelView):
     "Filtro de cobros asíncronos por usuario"
     __name__ = 'sale.async_payment.user_filter'
 
+    company = fields.Many2One(
+        'company.company', 'Empresa', required=True, ondelete='RESTRICT',
+        domain=[('id', 'in', Eval('context', {}).get('companies', []))])
     user = fields.Many2One(
         'res.user', 'Usuario', required=True, ondelete='CASCADE')
     shops = fields.Many2Many(
@@ -156,9 +161,23 @@ class AsyncPaymentUserFilter(ModelSQL, ModelView):
         super().__setup__()
         t = cls.__table__()
         cls._sql_constraints = [
-            ('user_unique', Unique(t, t.user),
-                'Ya existe un filtro para este usuario.'),
+            ('user_company_unique', Unique(t, t.user, t.company),
+                'Ya existe un filtro para este usuario y empresa.'),
         ]
+
+    @classmethod
+    def __register__(cls, module_name):
+        # Drop el constraint user_unique anterior si quedó del schema viejo.
+        table_h = cls.__table_handler__(module_name)
+        if 'user_unique' in [
+                c.removeprefix(table_h.table_name + '_')
+                for c in table_h._constraints]:
+            table_h.drop_constraint('user_unique')
+        super().__register__(module_name)
+
+    @staticmethod
+    def default_company():
+        return Transaction().context.get('company')
 
     def get_rec_name(self, name):
         return self.user.rec_name if self.user else ''

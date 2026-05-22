@@ -101,5 +101,22 @@
             <field name="perm_create" eval="False"/>
             <field name="perm_delete" eval="False"/>
         </record>
+
+        <!-- Aislamiento multi-empresa: cada usuario sólo ve cobros de
+             las empresas a las que tiene acceso (context.companies). -->
+        <record model="ir.rule.group"
+            id="rule_group_async_payment_companies">
+            <field name="name">Cobros asíncronos en empresas del usuario</field>
+            <field name="model"
+                search="[('model', '=', 'sale.async_payment')]"/>
+            <field name="global_p" eval="True"/>
+        </record>
+        <record model="ir.rule" id="rule_async_payment_companies">
+            <field name="domain"
+                eval="[('company', 'in', Eval('companies', []))]"
+                pyson="1"/>
+            <field name="rule_group"
+                ref="rule_group_async_payment_companies"/>
+        </record>
     </data>
 </tryton>
