@@ -1,18 +1,17 @@
 import datetime
 
+from trytond.exceptions import UserError
 from trytond.model import (
     ModelSingleton, ModelSQL, ModelView, Unique, fields, sequence_ordered)
 
-from .async_payment import PAYMENT_METHODS
+from .async_payment import (
+    ASYNC_CAPABLE_METHODS, ASYNC_CAPABLE_METHOD_LABELS)
 
 
 EXPIRATION_UNIT = [
     ('hours', 'Horas'),
     ('days', 'Días'),
 ]
-
-# Excluye 'other' — ese siempre usa el default
-_METHODS_FOR_LINE = [(k, v) for k, v in PAYMENT_METHODS if k != 'other']
 
 
 class AsyncPaymentConfig(ModelSingleton, ModelSQL, ModelView):
@@ -22,15 +21,16 @@ class AsyncPaymentConfig(ModelSingleton, ModelSQL, ModelView):
     default_expiration_value = fields.Integer(
         'Vencimiento por defecto',
         help='Cantidad de tiempo hasta que vence un cobro pendiente '
-             'cuando no hay una regla específica para el método.')
+             'cuando no hay una regla específica para el diario.')
     default_expiration_unit = fields.Selection(
         EXPIRATION_UNIT, 'Unidad por defecto',
         help='Unidad del vencimiento por defecto: Horas o Días.')
     lines = fields.One2Many(
         'sale.async_payment.config.line', 'config',
-        'Vencimiento por método',
-        help='Si el método coincide, usa ese vencimiento. '
-             'Sin regla → se aplica el valor por defecto.')
+        'Vencimiento por diario',
+        help='Cada diario habilitado para cobros asíncronos debe '
+             'figurar acá. Si una línea no define vencimiento, se usa '
+             'el valor por defecto.')
 
     @staticmethod
     def default_default_expiration_value():
@@ -40,12 +40,21 @@ class AsyncPaymentConfig(ModelSingleton, ModelSQL, ModelView):
     def default_default_expiration_unit():
         return 'hours'
 
-    def compute_expiration_date(self, payment_method):
-        for line in (self.lines or []):
-            if line.payment_method == payment_method:
-                value = line.expiration_value or self.default_expiration_value or 48
-                unit = line.expiration_unit or self.default_expiration_unit or 'hours'
-                break
+    def compute_expiration_date(self, journal):
+        # Busca la línea para el journal recibido; si no encuentra,
+        # cae al default. journal es el record completo (o None).
+        line = None
+        if journal is not None:
+            journal_id = getattr(journal, 'id', None)
+            for l in (self.lines or []):
+                line_journal = getattr(l, 'journal', None)
+                if line_journal and getattr(
+                        line_journal, 'id', None) == journal_id:
+                    line = l
+                    break
+        if line is not None:
+            value = line.expiration_value or self.default_expiration_value or 48
+            unit = line.expiration_unit or self.default_expiration_unit or 'hours'
         else:
             value = self.default_expiration_value or 48
             unit = self.default_expiration_unit or 'hours'
@@ -54,28 +63,77 @@ class AsyncPaymentConfig(ModelSingleton, ModelSQL, ModelView):
         return datetime.datetime.now() + delta
 
 
+def _async_capable_domain():
+    # Reutilizable: domain para Many2One a journal limitado a métodos
+    # de pago asincronizables.
+    return [('payment_method', 'in', list(ASYNC_CAPABLE_METHODS))]
+
+
 class AsyncPaymentConfigLine(ModelSQL, ModelView, sequence_ordered()):
-    "Vencimiento por método de cobro"
+    "Diario habilitado para cobros asíncronos"
     __name__ = 'sale.async_payment.config.line'
 
     config = fields.Many2One(
         'sale.async_payment.config', 'Configuración',
         required=True, ondelete='CASCADE')
-    payment_method = fields.Selection(
-        _METHODS_FOR_LINE, 'Método de cobro', required=True)
+    journal = fields.Many2One(
+        'account.statement.journal', 'Diario',
+        required=True, ondelete='CASCADE',
+        domain=_async_capable_domain(),
+        help='Diario de extracto bancario habilitado para cobros '
+             'asíncronos. Solo se listan diarios cuyo método de pago '
+             'admite el flujo asíncrono.')
+    journal_payment_method = fields.Function(
+        fields.Char('Método del diario'),
+        'on_change_with_journal_payment_method')
     expiration_value = fields.Integer(
         'Valor',
-        help='Cantidad de horas o días hasta que vence el cobro.')
+        help='Cantidad de horas o días hasta que vence el cobro. '
+             'Si está vacío, usa el valor por defecto de la configuración.')
     expiration_unit = fields.Selection(
-        EXPIRATION_UNIT, 'Unidad')
+        [('', '')] + EXPIRATION_UNIT, 'Unidad',
+        help='Horas o días. Si está vacío, usa la unidad por defecto.')
 
-    @staticmethod
-    def default_expiration_value():
-        return 48
+    @classmethod
+    def __setup__(cls):
+        super().__setup__()
+        t = cls.__table__()
+        cls._sql_constraints += [
+            ('journal_unique', Unique(t, t.journal),
+                'Ya existe una línea para este diario.'),
+        ]
 
     @staticmethod
     def default_expiration_unit():
-        return 'hours'
+        return ''
+
+    @fields.depends('journal')
+    def on_change_with_journal_payment_method(self, name=None):
+        if self.journal:
+            return getattr(self.journal, 'payment_method', None) or ''
+        return ''
+
+    @classmethod
+    def validate(cls, records):
+        super().validate(records)
+        for record in records:
+            record.check_journal_async_capable()
+
+    def check_journal_async_capable(self):
+        # El domain del campo ya restringe la UI, pero validamos también
+        # acá para resistir cambios via RPC, scripts o cambios al
+        # payment_method del journal después de crear la línea.
+        if not self.journal:
+            return
+        pm = getattr(self.journal, 'payment_method', None)
+        if pm not in ASYNC_CAPABLE_METHODS:
+            labels = ', '.join(
+                ASYNC_CAPABLE_METHOD_LABELS.get(m, m)
+                for m in ASYNC_CAPABLE_METHODS)
+            raise UserError(
+                "El diario '%s' (método '%s') no admite cobros "
+                "asíncronos. Los métodos compatibles son: %s."
+                % (self.journal.name, pm or 'none', labels))
 
 
 class AsyncPaymentUserFilter(ModelSQL, ModelView):

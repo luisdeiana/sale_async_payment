@@ -1,7 +1,8 @@
 <?xml version="1.0"?>
 <tree>
     <field name="sequence"/>
-    <field name="payment_method"/>
+    <field name="journal"/>
+    <field name="journal_payment_method"/>
     <field name="expiration_value"/>
     <field name="expiration_unit"/>
 </tree>

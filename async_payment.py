@@ -32,6 +32,27 @@ PAYMENT_METHODS = [
     ('other', 'Otro'),
 ]
 
+# Lista blanca de payment_methods de account.statement.journal que
+# admiten cobros asíncronos. Para sumar un medio de pago nuevo
+# (openpay/viumi/etc.) agregarlo acá Y mapearlo en
+# JOURNAL_TO_ASYNC_METHOD.
+ASYNC_CAPABLE_METHODS = ('mercadopago', 'bank_polling')
+
+# Mapeo journal.payment_method → payment_method derivado del async.
+# Lo usa el wizard al crear el async_payment. Cuando un mismo journal
+# admite varios sub-métodos (ej: MP link vs QR estático), se elige el
+# más común para cobros asíncronos.
+JOURNAL_TO_ASYNC_METHOD = {
+    'mercadopago': 'mp_link',
+    'bank_polling': 'bank_transfer',
+}
+
+# Etiquetas legibles para mensajes de error sobre métodos compatibles
+ASYNC_CAPABLE_METHOD_LABELS = {
+    'mercadopago': 'Mercado Pago',
+    'bank_polling': 'Transferencia bancaria',
+}
+
 STATES = [
     ('pending', 'Pendiente'),
     ('suggested', 'Sugerido'),
