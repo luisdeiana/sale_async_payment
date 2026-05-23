@@ -7,6 +7,6 @@ class User(metaclass=PoolMeta):
 
     async_payment_filters = fields.One2Many(
         'sale.async_payment.user_filter', 'user',
-        'Filtros de cobros asíncronos',
-        help='Configura qué cobros asíncronos ve este usuario en '
-             'la vista Cobros pendientes.')
+        "Async Payment Filters",
+        help="Configures which async payments this user sees in the "
+             "Pending Payments view.")

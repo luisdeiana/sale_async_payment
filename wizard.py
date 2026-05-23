@@ -6,8 +6,7 @@ from trytond.pool import Pool, PoolMeta
 from trytond.pyson import Bool, Eval
 from trytond.wizard import Button, StateTransition, StateView
 
-from .async_payment import (
-    ASYNC_CAPABLE_METHODS, JOURNAL_ASYNC_METHODS, PAYMENT_METHODS)
+from .async_payment import ASYNC_CAPABLE_METHODS, PAYMENT_METHODS
 
 
 def _journal_has_async_config(journal):
@@ -26,18 +25,33 @@ def _journal_has_async_config(journal):
 
 
 def _async_methods_for_journal(journal):
-    # Lista de payment_method permitidos para este journal, según
-    # JOURNAL_ASYNC_METHODS. Sin journal o sin mapeo → lista vacía
-    # (el cajero verá un Selection vacío y la transición fallará).
-    pm = getattr(journal, 'payment_method', None) if journal else None
-    return list(JOURNAL_ASYNC_METHODS.get(pm, []))
+    # Métodos habilitados explícitamente por el usuario en
+    # sale.async_payment.config.line para este journal. La whitelist
+    # técnica JOURNAL_ASYNC_METHODS sólo decide qué se puede agregar
+    # a la grilla; lo que se OFRECE al cajero es lo que el usuario
+    # efectivamente habilitó.
+    if not journal:
+        return []
+    pool = Pool()
+    ConfigLine = pool.get('sale.async_payment.config.line')
+    lines = ConfigLine.search(
+        [('journal', '=', journal.id)],
+        order=[('sequence', 'ASC'), ('id', 'ASC')])
+    seen = set()
+    methods = []
+    for line in lines:
+        m = line.payment_method
+        if m and m not in seen:
+            seen.add(m)
+            methods.append(m)
+    return methods
 
 
 class SalePaymentForm(metaclass=PoolMeta):
     __name__ = 'sale.payment.form'
 
     has_async_options = fields.Function(
-        fields.Boolean('Opciones asíncronas disponibles'),
+        fields.Boolean("Async Options Available"),
         'on_change_with_has_async_options')
 
     @fields.depends('journal')
@@ -47,32 +61,38 @@ class SalePaymentForm(metaclass=PoolMeta):
 
 
 class AsyncMethodSelectForm(ModelView):
-    'Selección de método de cobro asíncrono'
+    "Async Payment Method Selection"
     __name__ = 'sale.async.method.select.form'
 
     journal = fields.Many2One(
-        'account.statement.journal', 'Diario',
+        'account.statement.journal', "Journal",
         readonly=True,
-        help='Diario de cobro asíncrono (viene del wizard de pago).')
+        help="Journal used for the async payment (from the payment wizard).")
     payment_method = fields.Selection(
-        'get_payment_method_selection', 'Método', required=True, sort=False,
+        'get_payment_method_selection', "Method", required=True, sort=False,
         states={'readonly': Eval('payment_method_readonly', False)},
         depends=['payment_method_readonly'],
-        help='Método de cobro asíncrono. Las opciones disponibles '
-             'dependen del diario.')
+        help="Async payment method. Available options depend on the "
+             "journal.")
     payment_method_readonly = fields.Function(
-        fields.Boolean('Método fijo'),
+        fields.Boolean("Method Fixed"),
         'on_change_with_payment_method_readonly')
     payment_amount = fields.Numeric(
-        'Monto', digits=(16, 2), required=True)
-    notes = fields.Text('Notas')
+        "Amount", digits=(16, 2), required=True)
+    notes = fields.Text("Notes")
 
-    @classmethod
-    def get_payment_method_selection(cls):
-        # El Selection global incluye todos los métodos posibles;
-        # el filtrado por journal se hace vía on_change y validación
-        # en transition_async_register.
-        return list(PAYMENT_METHODS)
+    @fields.depends('journal')
+    def get_payment_method_selection(self):
+        # Selection dinámica: solo los métodos que el administrador
+        # habilitó en sale.async_payment.config.line para este journal.
+        # El decorador @fields.depends provoca que selection_change_with
+        # quede en {'journal'} → el cliente refresca opciones al cambiar
+        # el journal y la RPC se invoca con instancia (instantiate=0).
+        if not self.journal:
+            return []
+        labels = dict(PAYMENT_METHODS)
+        return [(m, labels.get(m, m))
+                for m in _async_methods_for_journal(self.journal)]
 
     @fields.depends('journal')
     def on_change_with_payment_method_readonly(self, name=None):
@@ -81,16 +101,16 @@ class AsyncMethodSelectForm(ModelView):
 
 
 class AsyncConfirmForm(ModelView):
-    'Resultado del registro de cobro asíncrono'
+    "Async Payment Registration Result"
     __name__ = 'sale.async.confirm.form'
 
-    payment_method_label = fields.Char('Método', readonly=True)
+    payment_method_label = fields.Char("Method", readonly=True)
     amount = fields.Numeric(
-        'Monto registrado', digits=(16, 2), readonly=True)
+        "Registered Amount", digits=(16, 2), readonly=True)
     payment_url = fields.Char(
-        'URL de pago', readonly=True,
-        help='Compartí este link con el cliente.')
-    message = fields.Text('Mensaje', readonly=True)
+        "Payment URL", readonly=True,
+        help="Share this link with the customer.")
+    message = fields.Text("Message", readonly=True)
 
 
 class WizardSalePayment(metaclass=PoolMeta):
@@ -103,8 +123,8 @@ class WizardSalePayment(metaclass=PoolMeta):
 
     async_method_select = StateView('sale.async.method.select.form',
         'sale_async_payment.async_method_select_view_form', [
-            Button('Volver', 'start', 'tryton-back'),
-            Button('Registrar', 'async_register',
+            Button("Back", 'start', 'tryton-back'),
+            Button("Register", 'async_register',
                 'tryton-ok', default=True),
         ])
 
@@ -112,16 +132,16 @@ class WizardSalePayment(metaclass=PoolMeta):
 
     async_confirm = StateView('sale.async.confirm.form',
         'sale_async_payment.async_confirm_view_form', [
-            Button('Cerrar', 'end', 'tryton-ok', default=True),
+            Button("Close", 'end', 'tryton-ok', default=True),
         ])
 
     @classmethod
     def __setup__(cls):
         super().__setup__()
-        # Insertar "Pago asíncrono" entre el botón Cancel y el Pay del
-        # state 'start' del wizard base.
+        # Insert "Async Payment" between Cancel and Pay buttons of the
+        # base wizard's 'start' state.
         async_button = Button(
-            'Pago asíncrono', 'async_method_select', 'tryton-launch',
+            "Async Payment", 'async_method_select', 'tryton-launch',
             states={
                 'invisible': ~Bool(Eval('has_async_options', False))})
         buttons = list(cls.start.buttons)
@@ -133,9 +153,22 @@ class WizardSalePayment(metaclass=PoolMeta):
 
     def default_async_method_select(self, fields):
         journal = self.start.journal
-        amount = self.start.payment_amount or Decimal('0.0')
         methods = _async_methods_for_journal(journal)
         default_method = methods[0] if methods else None
+        # Default sugerido: residual efectivo (total - pagado - async
+        # pendiente), no el payment_amount tipeado en el form base.
+        # Si la venta tiene async pending suma N y queda residual R,
+        # ofrecemos R; cuando R<=0 ofrecemos lo que tipeó el usuario
+        # como fallback (no debería llegar acá porque el botón es
+        # invisible en ese caso).
+        sale = self.record
+        effective = (
+            getattr(sale, 'effective_residual_amount', None)
+            if sale is not None else None)
+        if effective is not None and effective > 0:
+            amount = effective
+        else:
+            amount = self.start.payment_amount or Decimal('0.0')
         return {
             'journal': journal.id if journal else None,
             'payment_method': default_method,
@@ -154,12 +187,12 @@ class WizardSalePayment(metaclass=PoolMeta):
 
     @classmethod
     def _async_validate_journal(cls, journal):
-        # El botón asíncrono solo aparece si el journal tiene línea.
-        # Re-validamos acá por defensa contra cambios post-render.
+        # The async button only appears when the journal has a config
+        # line. We re-validate here against post-render tampering.
         if not _journal_has_async_config(journal):
             raise UserError(
-                "El diario '%s' no tiene cobros asíncronos habilitados. "
-                "Configurarlo en Configuración → Cobros asíncronos."
+                "Journal '%s' has no async payments enabled. "
+                "Configure it under Configuration → Async Payments."
                 % (getattr(journal, 'name', '?') if journal else '?'))
 
     def transition_async_register(self):
@@ -176,7 +209,7 @@ class WizardSalePayment(metaclass=PoolMeta):
         journal = self.start.journal
 
         if amount is None or amount <= 0:
-            raise UserError('El monto debe ser mayor a cero.')
+            raise UserError("Amount must be greater than zero.")
 
         self._async_validate_journal(journal)
 
@@ -184,11 +217,11 @@ class WizardSalePayment(metaclass=PoolMeta):
         allowed = _async_methods_for_journal(journal)
         if not method or method not in allowed:
             raise UserError(
-                "El método '%s' no está habilitado para el diario '%s'. "
-                "Opciones válidas: %s."
+                "Method '%s' is not enabled for journal '%s'. "
+                "Valid options: %s."
                 % (method or '-',
                    getattr(journal, 'name', '?'),
-                   ', '.join(allowed) if allowed else '(ninguna)'))
+                   ', '.join(allowed) if allowed else '(none)'))
 
         shop_id = sale.shop.id if getattr(sale, 'shop', None) else None
         company_id = (
@@ -196,7 +229,7 @@ class WizardSalePayment(metaclass=PoolMeta):
             else None)
         Config = pool.get('sale.async_payment.config')
         config = Config(1)
-        expiration_date = config.compute_expiration_date(journal)
+        expiration_date = config.compute_expiration_date(journal, method)
         vals = {
             'company': company_id,
             'sale': sale.id,
@@ -238,15 +271,15 @@ class WizardSalePayment(metaclass=PoolMeta):
         if ap.mp_transaction:
             url = ap.mp_transaction.payment_url or ''
         if url:
-            message = ('Cobro asíncrono registrado. Compartí el link '
-                'de pago con el cliente. Cuando confirme, el sistema '
-                'lo procesará automáticamente.')
+            message = ("Async payment registered. Share the payment "
+                "link with the customer. When confirmed, the system "
+                "will process it automatically.")
         elif ap.payment_method == 'mp_link':
-            message = ('Cobro registrado, pero no se obtuvo URL del '
-                'link. Revisar la configuración de Mercado Pago.')
+            message = ("Payment registered, but no link URL was "
+                "obtained. Check the Mercado Pago configuration.")
         else:
-            message = ('Cobro asíncrono registrado en estado '
-                'Pendiente. Se confirmará cuando llegue el pago.')
+            message = ("Async payment registered as Pending. It will "
+                "be confirmed when the payment arrives.")
         return {
             'payment_method_label': label,
             'amount': ap.amount,

@@ -3,7 +3,7 @@
     <data>
         <!-- Grupo operativo: puede ver y gestionar cobros asíncronos propios -->
         <record model="res.group" id="group_async_payment_user">
-            <field name="name">Cobros asíncronos — Operador</field>
+            <field name="name">Async Payments — Operator</field>
             <field name="parent" ref="sale.group_sale"/>
         </record>
 
@@ -106,7 +106,7 @@
              las empresas a las que tiene acceso (context.companies). -->
         <record model="ir.rule.group"
             id="rule_group_async_payment_companies">
-            <field name="name">Cobros asíncronos en empresas del usuario</field>
+            <field name="name">Async Payments in User's Companies</field>
             <field name="model"
                 search="[('model', '=', 'sale.async_payment')]"/>
             <field name="global_p" eval="True"/>

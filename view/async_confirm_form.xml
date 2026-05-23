@@ -6,6 +6,6 @@
     <field name="amount"/>
     <label name="payment_url"/>
     <field name="payment_url" widget="url"/>
-    <separator string="Mensaje" id="sep_msg" colspan="2"/>
+    <separator string="Message" id="sep_msg" colspan="2"/>
     <field name="message" colspan="2" yexpand="1"/>
 </form>

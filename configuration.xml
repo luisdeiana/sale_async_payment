@@ -25,7 +25,7 @@
         <!-- Acción para abrir configuración -->
         <record model="ir.action.act_window"
             id="act_async_payment_config">
-            <field name="name">Configuración de cobros asíncronos</field>
+            <field name="name">Async Payment Configuration</field>
             <field name="res_model">sale.async_payment.config</field>
         </record>
         <record model="ir.action.act_window.view"
@@ -38,7 +38,7 @@
         <!-- Menú: Configuración → Cobros asíncronos -->
         <menuitem
             id="menu_async_payment_config"
-            name="Cobros asíncronos"
+            name="Async Payments"
             parent="account.menu_account_configuration"
             action="act_async_payment_config"
             icon="tryton-settings"

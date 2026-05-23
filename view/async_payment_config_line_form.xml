@@ -1,9 +1,13 @@
 <?xml version="1.0"?>
 <form>
+    <label name="sequence"/>
+    <field name="sequence"/>
     <label name="journal"/>
     <field name="journal"/>
     <label name="journal_payment_method"/>
     <field name="journal_payment_method"/>
+    <label name="payment_method"/>
+    <field name="payment_method"/>
     <label name="expiration_value"/>
     <field name="expiration_value"/>
     <label name="expiration_unit"/>

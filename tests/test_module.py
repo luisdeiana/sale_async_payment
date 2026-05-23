@@ -142,32 +142,64 @@ class TestAsyncCapableMethods(unittest.TestCase):
                     f"El método '{m}' para '{journal_pm}' no está en "
                     f"PAYMENT_METHODS")
 
-    def test_async_methods_for_journal_mp(self):
-        """Journal mercadopago → ofrece mp_link y bank_transfer."""
+    @staticmethod
+    def _mock_pool_with_config_lines(methods_for_journal):
+        """Build a Pool() mock que devuelve líneas con esos
+        payment_methods cuando se busca config.line por journal."""
+        config_line_cls = MagicMock()
+        config_line_cls.search.return_value = [
+            MagicMock(payment_method=m) for m in methods_for_journal]
+        pool_mock = MagicMock()
+        pool_mock.get.return_value = config_line_cls
+        return pool_mock
+
+    def test_async_methods_for_journal_returns_enabled_methods(self):
+        """Devuelve los métodos habilitados por el usuario en config.line
+        (mp_link, bank_transfer) para un journal con varias líneas."""
         from sale_async_payment.wizard import _async_methods_for_journal
-        journal = MagicMock(payment_method='mercadopago')
-        self.assertEqual(
-            _async_methods_for_journal(journal),
+        pool_mock = self._mock_pool_with_config_lines(
             ['mp_link', 'bank_transfer'])
+        journal = MagicMock(id=10, payment_method='mercadopago')
+        with patch('sale_async_payment.wizard.Pool',
+                   return_value=pool_mock):
+            result = _async_methods_for_journal(journal)
+        self.assertEqual(result, ['mp_link', 'bank_transfer'])
 
-    def test_async_methods_for_journal_bank(self):
-        """Journal bank_polling → único método bank_transfer."""
+    def test_async_methods_for_journal_one_line(self):
+        """Journal con una sola línea habilitada → un solo método."""
         from sale_async_payment.wizard import _async_methods_for_journal
-        journal = MagicMock(payment_method='bank_polling')
-        self.assertEqual(
-            _async_methods_for_journal(journal),
-            ['bank_transfer'])
+        pool_mock = self._mock_pool_with_config_lines(['bank_transfer'])
+        journal = MagicMock(id=11, payment_method='bank_polling')
+        with patch('sale_async_payment.wizard.Pool',
+                   return_value=pool_mock):
+            result = _async_methods_for_journal(journal)
+        self.assertEqual(result, ['bank_transfer'])
 
-    def test_async_methods_for_journal_unknown_empty(self):
-        """Journal sin mapeo → lista vacía."""
+    def test_async_methods_for_journal_no_lines(self):
+        """Journal sin líneas en config.line → lista vacía."""
         from sale_async_payment.wizard import _async_methods_for_journal
-        journal = MagicMock(payment_method='unknown_method')
-        self.assertEqual(_async_methods_for_journal(journal), [])
+        pool_mock = self._mock_pool_with_config_lines([])
+        journal = MagicMock(id=12, payment_method='mercadopago')
+        with patch('sale_async_payment.wizard.Pool',
+                   return_value=pool_mock):
+            result = _async_methods_for_journal(journal)
+        self.assertEqual(result, [])
 
     def test_async_methods_for_journal_none(self):
         """Sin journal → lista vacía."""
         from sale_async_payment.wizard import _async_methods_for_journal
         self.assertEqual(_async_methods_for_journal(None), [])
+
+    def test_async_methods_for_journal_deduplicates(self):
+        """Si hubiera duplicados (caso defensivo), se devuelven únicos."""
+        from sale_async_payment.wizard import _async_methods_for_journal
+        pool_mock = self._mock_pool_with_config_lines(
+            ['mp_link', 'mp_link', 'bank_transfer'])
+        journal = MagicMock(id=13, payment_method='mercadopago')
+        with patch('sale_async_payment.wizard.Pool',
+                   return_value=pool_mock):
+            result = _async_methods_for_journal(journal)
+        self.assertEqual(result, ['mp_link', 'bank_transfer'])
 
 
 class TestConfigLineJournalValidation(unittest.TestCase):
@@ -196,7 +228,7 @@ class TestConfigLineJournalValidation(unittest.TestCase):
         with self.assertRaises(UserError) as ctx:
             AsyncPaymentConfigLine.check_journal_async_capable(line)
         self.assertIn('Caja Efectivo', str(ctx.exception))
-        self.assertIn('no admite cobros asíncronos', str(ctx.exception))
+        self.assertIn('does not support async payments', str(ctx.exception))
 
     def test_check_journal_async_capable_rejects_unknown(self):
         """Journal con payment_method desconocido dispara UserError."""
@@ -418,12 +450,20 @@ class TestWizardAsyncRegister(unittest.TestCase):
             datetime.datetime(2026, 6, 1, 12, 0))
         async_config_cls.return_value = async_config_instance
 
+        # Líneas habilitadas para el journal (mercadopago) por config.line
+        config_line_cls = MagicMock()
+        config_line_cls.search.return_value = [
+            MagicMock(payment_method='mp_link'),
+            MagicMock(payment_method='bank_transfer'),
+        ]
+
         def pool_get(model):
             return {
                 'sale.async_payment': async_payment_cls,
                 'sale.sale': sale_cls,
                 'account.payment.mp.config': mp_config_cls,
                 'sale.async_payment.config': async_config_cls,
+                'sale.async_payment.config.line': config_line_cls,
             }[model]
 
         pool_mock = MagicMock()
@@ -497,12 +537,19 @@ class TestWizardAsyncRegister(unittest.TestCase):
 
         mp_config_cls = MagicMock()
 
+        # Líneas habilitadas para el journal (bank_polling) por config.line
+        config_line_cls = MagicMock()
+        config_line_cls.search.return_value = [
+            MagicMock(payment_method='bank_transfer'),
+        ]
+
         def pool_get(model):
             return {
                 'sale.async_payment': async_payment_cls,
                 'sale.sale': sale_cls,
                 'sale.async_payment.config': async_config_cls,
                 'account.payment.mp.config': mp_config_cls,
+                'sale.async_payment.config.line': config_line_cls,
             }[model]
 
         pool_mock = MagicMock()

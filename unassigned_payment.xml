@@ -15,7 +15,7 @@
 
         <!-- Acción principal -->
         <record model="ir.action.act_window" id="act_unassigned_payment">
-            <field name="name">Pagos no asignados</field>
+            <field name="name">Unassigned Payments</field>
             <field name="res_model">sale.unassigned_payment</field>
         </record>
         <record model="ir.action.act_window.view"
@@ -45,7 +45,7 @@
             <field name="name">link_unassigned_form</field>
         </record>
         <record model="ir.action.wizard" id="wizard_link_unassigned">
-            <field name="name">Vincular pago no asignado</field>
+            <field name="name">Link Unassigned Payment</field>
             <field name="wiz_name">sale.unassigned_payment.link</field>
             <field name="model">sale.unassigned_payment</field>
         </record>
@@ -80,7 +80,7 @@
         <!-- Menú: Cobros → Pagos no asignados -->
         <menuitem
             id="menu_unassigned_payment"
-            name="Pagos no asignados"
+            name="Unassigned Payments"
             parent="account_payment_qr.menu_cobros_qr"
             action="act_unassigned_payment"
             icon="tryton-warning"

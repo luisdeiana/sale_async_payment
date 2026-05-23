@@ -9,4 +9,4 @@ class Cron(metaclass=PoolMeta):
         super().__setup__()
         cls.method.selection.append(
             ('sale.async_payment|expire_cron',
-             'Vencer cobros asíncronos pendientes'))
+             "Expire Pending Async Payments"))

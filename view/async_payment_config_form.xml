@@ -1,12 +1,12 @@
 <?xml version="1.0"?>
 <form>
-    <separator string="Vencimiento por defecto" colspan="4"
+    <separator string="Default Expiration" colspan="4"
         id="sep_default_expiration"/>
     <label name="default_expiration_value"/>
     <field name="default_expiration_value"/>
     <label name="default_expiration_unit"/>
     <field name="default_expiration_unit"/>
-    <separator string="Vencimiento por método" colspan="4"
+    <separator string="Expiration per Method" colspan="4"
         id="sep_lines"/>
     <field name="lines" colspan="4"/>
 </form>

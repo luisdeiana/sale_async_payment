@@ -9,19 +9,19 @@ class Sale(metaclass=PoolMeta):
     __name__ = 'sale.sale'
 
     async_payments = fields.One2Many(
-        'sale.async_payment', 'sale', 'Cobros asíncronos')
+        'sale.async_payment', 'sale', "Async Payments")
 
     async_pending_amount = fields.Function(
         fields.Numeric(
-            'Pendiente asíncrono', digits=(16, 2),
-            help='Suma de cobros asíncronos en estado Pendiente o Sugerido.'),
+            "Pending Async", digits=(16, 2),
+            help="Sum of async payments in Pending or Suggested state."),
         'get_async_pending_amount')
 
     effective_residual_amount = fields.Function(
         fields.Numeric(
-            'Residual efectivo', digits=(16, 2),
-            help='Total de la venta menos cobros confirmados '
-                 'menos cobros asíncronos pendientes.'),
+            "Effective Residual", digits=(16, 2),
+            help="Sale total minus confirmed payments minus pending "
+                 "async payments."),
         'get_effective_residual_amount')
 
     @classmethod
@@ -86,8 +86,8 @@ class Sale(metaclass=PoolMeta):
         if blocked:
             names = ', '.join(s.rec_name for s in blocked)
             raise UserError(
-                'No se puede cancelar la venta porque tiene cobros '
-                'asíncronos confirmados: ' + names)
+                "Cannot cancel sale because it has confirmed async "
+                "payments: " + names)
 
         if to_cascade:
             AsyncPayment.write(to_cascade, {'state': 'cancelled'})

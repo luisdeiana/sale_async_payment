@@ -19,21 +19,21 @@ _QR_OFFSET = 2 * 10 ** 12
 
 
 class UnassignedPayment(ModelSQL, ModelView):
-    "Pago no asignado"
+    "Unassigned Payment"
     __name__ = 'sale.unassigned_payment'
 
     source = fields.Selection([
         ('mp', 'Mercado Pago'),
-        ('qr', 'QR / Transferencia'),
-    ], 'Origen', readonly=True)
-    source_id = fields.Integer('ID en origen', readonly=True)
-    reference = fields.Char('Referencia', readonly=True)
-    amount = fields.Numeric('Importe', digits=(16, 2), readonly=True)
-    date = fields.Date('Fecha', readonly=True)
-    payer_name = fields.Char('Pagador', readonly=True)
-    payer_cuit = fields.Char('CUIT pagador', readonly=True)
+        ('qr', 'QR / Transfer'),
+    ], "Source", readonly=True)
+    source_id = fields.Integer("Source ID", readonly=True)
+    reference = fields.Char("Reference", readonly=True)
+    amount = fields.Numeric("Amount", digits=(16, 2), readonly=True)
+    date = fields.Date("Date", readonly=True)
+    payer_name = fields.Char("Payer", readonly=True)
+    payer_cuit = fields.Char("Payer Tax ID", readonly=True)
     statement_line = fields.Many2One(
-        'account.statement.line', 'Línea de extracto', readonly=True)
+        'account.statement.line', "Statement Line", readonly=True)
 
     @classmethod
     def __setup__(cls):
@@ -174,28 +174,28 @@ class UnassignedPayment(ModelSQL, ModelView):
 
 
 class LinkUnassignedPaymentForm(ModelView):
-    'Vincular pago no asignado a venta'
+    "Link Unassigned Payment to Sale"
     __name__ = 'sale.unassigned_payment.link.form'
 
     sale = fields.Many2One(
-        'sale.sale', 'Venta', required=True,
+        'sale.sale', "Sale", required=True,
         domain=[('state', 'in', [
             'draft', 'quotation', 'confirmed', 'processing'])])
     payment_amount = fields.Numeric(
-        'Importe del pago', digits=(16, 2), readonly=True)
-    payment_source = fields.Char('Origen', readonly=True)
-    payment_reference = fields.Char('Referencia', readonly=True)
-    payer_name = fields.Char('Pagador', readonly=True)
+        "Payment Amount", digits=(16, 2), readonly=True)
+    payment_source = fields.Char("Source", readonly=True)
+    payment_reference = fields.Char("Reference", readonly=True)
+    payer_name = fields.Char("Payer", readonly=True)
 
 
 class LinkUnassignedPayment(Wizard):
-    'Vincular pago no asignado'
+    "Link Unassigned Payment"
     __name__ = 'sale.unassigned_payment.link'
 
     start = StateView('sale.unassigned_payment.link.form',
         'sale_async_payment.link_unassigned_form_view', [
-            Button('Cancelar', 'end', 'tryton-cancel'),
-            Button('Vincular', 'link_', 'tryton-ok', default=True),
+            Button("Cancel", 'end', 'tryton-cancel'),
+            Button("Link", 'link_', 'tryton-ok', default=True),
         ])
     link_ = StateTransition()
 
@@ -223,14 +223,14 @@ class LinkUnassignedPayment(Wizard):
             return 'end'
         sale = self.start.sale
         if not sale:
-            raise UserError('Seleccionar una venta.')
+            raise UserError("Select a sale.")
 
         now = datetime.datetime.now()
         vals = UnassignedPayment._build_async_vals(unassigned, sale, now)
         if not vals.get('journal'):
             raise UserError(
-                'No se pudo determinar el diario del pago. Revisar '
-                'la configuración del origen.')
+                "Could not determine the payment journal. Check the "
+                "source configuration.")
 
         async_payment = AsyncPayment.create([vals])[0]
 

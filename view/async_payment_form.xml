@@ -14,7 +14,7 @@
     <field name="shop"/>
     <label name="expiration_date"/>
     <field name="expiration_date"/>
-    <separator string="Datos del pago recibido" colspan="4" id="sep_payment_data"/>
+    <separator string="Received Payment Data" colspan="4" id="sep_payment_data"/>
     <label name="received_amount"/>
     <field name="received_amount"/>
     <label name="mp_payment_id"/>
@@ -33,7 +33,7 @@
     <field name="mp_transaction"/>
     <label name="qr_detection"/>
     <field name="qr_detection"/>
-    <separator string="Resultado" colspan="4" id="sep_result"/>
+    <separator string="Result" colspan="4" id="sep_result"/>
     <label name="statement_line"/>
     <field name="statement_line"/>
     <label name="confirmed_by"/>
@@ -42,15 +42,15 @@
     <field name="confirmed_date"/>
     <label name="company"/>
     <field name="company"/>
-    <separator string="Notas" colspan="4" id="sep_notes"/>
+    <separator string="Notes" colspan="4" id="sep_notes"/>
     <label name="notes"/>
     <field name="notes" colspan="3"/>
     <group col="4" colspan="4" id="grp_buttons">
-        <button name="confirm" string="Confirmar" icon="tryton-ok"/>
+        <button name="confirm" string="Confirm" icon="tryton-ok"/>
         <button name="reject_suggestion"
-            string="Rechazar sugerencia" icon="tryton-refresh"/>
-        <button name="cancel" string="Cancelar" icon="tryton-cancel"/>
+            string="Reject Suggestion" icon="tryton-refresh"/>
+        <button name="cancel" string="Cancel" icon="tryton-cancel"/>
         <button name="reactivate"
-            string="Reactivar" icon="tryton-launch"/>
+            string="Reactivate" icon="tryton-launch"/>
     </group>
 </form>

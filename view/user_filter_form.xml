@@ -6,6 +6,6 @@
     <field name="company"/>
     <label name="only_own"/>
     <field name="only_own"/>
-    <separator string="Sucursales visibles" id="sep_shops" colspan="2"/>
+    <separator string="Visible Shops" id="sep_shops" colspan="2"/>
     <field name="shops" colspan="2"/>
 </form>

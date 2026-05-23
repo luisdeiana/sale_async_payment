@@ -26,10 +26,10 @@ def _user_is_payment_supervisor():
 
 
 PAYMENT_METHODS = [
-    ('mp_link', 'Link Mercado Pago'),
-    ('mp_qr_static', 'QR Mercado Pago (estático)'),
-    ('bank_transfer', 'Transferencia bancaria'),
-    ('other', 'Otro'),
+    ('mp_link', 'Mercado Pago Link'),
+    ('mp_qr_static', 'Mercado Pago Static QR'),
+    ('bank_transfer', 'Bank Transfer'),
+    ('other', 'Other'),
 ]
 
 # Lista blanca de payment_methods de account.statement.journal que
@@ -48,107 +48,106 @@ JOURNAL_ASYNC_METHODS = {
     'bank_polling': ['bank_transfer'],
 }
 
-# Etiquetas legibles para mensajes de error sobre métodos compatibles
+# Human-readable labels for error messages about compatible methods
 ASYNC_CAPABLE_METHOD_LABELS = {
     'mercadopago': 'Mercado Pago',
-    'bank_polling': 'Transferencia bancaria',
+    'bank_polling': 'Bank Transfer',
 }
 
 STATES = [
-    ('pending', 'Pendiente'),
-    ('suggested', 'Sugerido'),
-    ('confirmed', 'Confirmado'),
-    ('expired', 'Vencido'),
-    ('cancelled', 'Cancelado'),
+    ('pending', 'Pending'),
+    ('suggested', 'Suggested'),
+    ('confirmed', 'Confirmed'),
+    ('expired', 'Expired'),
+    ('cancelled', 'Cancelled'),
 ]
 
 MATCH_CRITERIA = [
-    ('mp_payment_id', 'ID de pago MP'),
-    ('bank_reference', 'Referencia bancaria'),
-    ('payer_cuit', 'CUIT del pagador'),
-    ('amount_exact', 'Importe exacto'),
-    ('manual', 'Vinculación manual'),
+    ('mp_payment_id', 'MP Payment ID'),
+    ('bank_reference', 'Bank Reference'),
+    ('payer_cuit', 'Payer Tax ID'),
+    ('amount_exact', 'Exact Amount'),
+    ('manual', 'Manual Link'),
 ]
 
 
 class AsyncPayment(Workflow, ModelSQL, ModelView):
-    "Cobro asíncrono"
+    "Async Payment"
     __name__ = 'sale.async_payment'
 
     company = fields.Many2One(
-        'company.company', 'Empresa', required=True, ondelete='RESTRICT',
-        domain=[('id', 'in', Eval('context', {}).get('companies', []))],
+        'company.company', "Company", required=True, ondelete='RESTRICT',
         states={'readonly': Eval('state') != 'pending'})
     sale = fields.Many2One(
-        'sale.sale', 'Venta', required=True, ondelete='RESTRICT',
+        'sale.sale', "Sale", required=True, ondelete='RESTRICT',
         states={'readonly': Eval('state') != 'pending'})
     amount = fields.Numeric(
-        'Importe', digits=(16, 2), required=True,
+        "Amount", digits=(16, 2), required=True,
         states={'readonly': Eval('state') != 'pending'})
     journal = fields.Many2One(
-        'account.statement.journal', 'Diario de extracto', required=True,
+        'account.statement.journal', "Statement Journal", required=True,
         states={'readonly': Eval('state') != 'pending'})
     payment_method = fields.Selection(
-        PAYMENT_METHODS, 'Método de cobro', required=True,
+        PAYMENT_METHODS, "Payment Method", required=True,
         states={'readonly': Eval('state') != 'pending'})
     shop = fields.Many2One(
-        'sale.shop', 'Sucursal',
+        'sale.shop', "Shop",
         states={'readonly': Eval('state') != 'pending'})
     notes = fields.Text(
-        'Notas',
+        "Notes",
         states={'readonly': Eval('state').in_(['confirmed', 'cancelled'])})
     state = fields.Selection(
-        STATES, 'Estado', readonly=True, required=True)
+        STATES, "State", readonly=True, required=True)
     expiration_date = fields.DateTime(
-        'Fecha de vencimiento',
+        "Expiration Date",
         states={'readonly': Eval('state') != 'pending'})
     expiration_date_date = fields.Function(
-        fields.Date('Vence'),
+        fields.Date("Expires"),
         'get_expiration_date_date')
 
-    # Datos del pago recibido (se completan al sugerir/confirmar)
+    # Received payment data (filled when suggested/confirmed)
     received_amount = fields.Numeric(
-        'Importe recibido', digits=(16, 2),
+        "Received Amount", digits=(16, 2),
         states={'readonly': Eval('state').in_(['confirmed', 'cancelled'])})
     mp_payment_id = fields.Char(
-        'ID de pago MP',
+        "MP Payment ID",
         states={'readonly': Eval('state').in_(['confirmed', 'cancelled'])})
     bank_reference = fields.Char(
-        'Referencia bancaria',
+        "Bank Reference",
         states={'readonly': Eval('state').in_(['confirmed', 'cancelled'])})
     payer_name = fields.Char(
-        'Nombre del pagador',
+        "Payer Name",
         states={'readonly': Eval('state').in_(['confirmed', 'cancelled'])})
     payer_cuit = fields.Char(
-        'CUIT del pagador',
+        "Payer Tax ID",
         states={'readonly': Eval('state').in_(['confirmed', 'cancelled'])})
     match_criteria = fields.Selection(
-        MATCH_CRITERIA + [('', '')], 'Criterio de coincidencia', sort=False,
+        MATCH_CRITERIA + [('', '')], "Match Criteria", sort=False,
         states={'readonly': Eval('state').in_(['confirmed', 'cancelled'])})
     matched_date = fields.DateTime(
-        'Fecha de coincidencia',
+        "Match Date",
         states={'readonly': True})
 
-    # Vínculo con transacciones externas
+    # External transactions link
     mp_transaction = fields.Many2One(
-        'account.payment.mp.transaction', 'Transacción MP',
+        'account.payment.mp.transaction', "MP Transaction",
         ondelete='SET NULL',
         states={'invisible': Eval('payment_method') != 'mp_link',
                 'readonly': Eval('state').in_(['confirmed', 'cancelled'])})
     qr_detection = fields.Many2One(
-        'account.payment.qr.detection', 'Detección QR',
+        'account.payment.qr.detection', "QR Detection",
         ondelete='SET NULL',
         states={'invisible': Eval('payment_method') != 'bank_transfer',
                 'readonly': Eval('state').in_(['confirmed', 'cancelled'])})
 
-    # Resultado de la confirmación
+    # Confirmation result
     statement_line = fields.Many2One(
-        'account.statement.line', 'Línea de extracto',
+        'account.statement.line', "Statement Line",
         readonly=True, ondelete='SET NULL')
     confirmed_by = fields.Many2One(
-        'res.user', 'Confirmado por', readonly=True)
+        'res.user', "Confirmed By", readonly=True)
     confirmed_date = fields.DateTime(
-        'Fecha de confirmación', readonly=True)
+        "Confirmation Date", readonly=True)
 
     # Transiciones de estados válidas
     _transitions = {
@@ -472,8 +471,8 @@ class AsyncPayment(Workflow, ModelSQL, ModelView):
         for ap in async_payments:
             if ap.state not in ('pending', 'suggested'):
                 raise UserError(
-                    'Solo cobros en estado Pendiente o Sugerido pueden '
-                    'confirmarse. Estado actual: ' + ap.state)
+                    "Only payments in Pending or Suggested state can be "
+                    "confirmed. Current state: " + ap.state)
 
             received, diff = cls._compute_received_and_diff(ap)
 
@@ -482,9 +481,9 @@ class AsyncPayment(Workflow, ModelSQL, ModelView):
                 if Warning_.check(key):
                     raise UserWarning(
                         key,
-                        f'Recibido ${received}, esperado ${ap.amount}, '
-                        f'diferencia ${diff}. ¿Confirmar igualmente '
-                        f'la línea con la diferencia registrada?')
+                        f"Received ${received}, expected ${ap.amount}, "
+                        f"difference ${diff}. Confirm the line anyway "
+                        f"with the recorded difference?")
 
             stmt_id = ap.journal.get_or_create_statement_for_date(today)
             party = ap.sale.party
@@ -492,7 +491,7 @@ class AsyncPayment(Workflow, ModelSQL, ModelView):
                 account = party.account_receivable_used
             if not account:
                 raise UserError(
-                    'El cliente %s no tiene cuenta a cobrar configurada.'
+                    "Party '%s' has no receivable account configured."
                     % party.name)
 
             description = (
@@ -546,16 +545,17 @@ class AsyncPayment(Workflow, ModelSQL, ModelView):
     def cancel(cls, async_payments):
         for ap in async_payments:
             if ap.state == 'confirmed':
-                # Cancelar un confirmado implica revertir la statement.line
-                # y los efectos contables — queda fuera de scope del paso 7.
-                # Cuando se implemente, exigirá rol Supervisor (group_payment_supervisor).
+                # Cancelling a confirmed payment implies reverting the
+                # statement.line and accounting effects — out of scope
+                # for step 7. When implemented, will require Supervisor
+                # role (group_payment_supervisor).
                 raise UserError(
-                    'No se puede cancelar un cobro Confirmado desde '
-                    'esta vista. Revertir la línea de extracto '
-                    'manualmente y crear un nuevo cobro asíncrono.')
+                    "Cannot cancel a Confirmed payment from this view. "
+                    "Revert the statement line manually and create a "
+                    "new async payment.")
             if ap.state in ('cancelled', 'expired'):
                 raise UserError(
-                    'El cobro ya está en estado ' + ap.state)
+                    "Payment is already in state " + ap.state)
 
     @classmethod
     @ModelView.button
@@ -564,7 +564,7 @@ class AsyncPayment(Workflow, ModelSQL, ModelView):
         for ap in async_payments:
             if ap.state != 'suggested':
                 raise UserError(
-                    'Solo cobros en estado Sugerido pueden rechazarse.')
+                    "Only payments in Suggested state can be rejected.")
         cls.write(list(async_payments), {
             'mp_payment_id': None,
             'bank_reference': None,
@@ -581,9 +581,9 @@ class AsyncPayment(Workflow, ModelSQL, ModelView):
     def reactivate(cls, async_payments):
         if not _user_is_payment_supervisor():
             raise UserError(
-                'Reactivar un cobro vencido requiere el rol '
-                '"Supervisor de cobros".')
+                "Reactivating an expired payment requires the "
+                "\"Payment Supervisor\" role.")
         for ap in async_payments:
             if ap.state != 'expired':
                 raise UserError(
-                    'Solo cobros Vencidos pueden reactivarse.')
+                    "Only Expired payments can be reactivated.")

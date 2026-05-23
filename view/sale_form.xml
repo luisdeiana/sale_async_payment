@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <data>
     <xpath expr="/form/notebook" position="inside">
-        <page string="Cobros asíncronos" id="page_async_payments" col="4">
+        <page string="Async Payments" id="page_async_payments" col="4">
             <label name="async_pending_amount"/>
             <field name="async_pending_amount"/>
             <label name="effective_residual_amount"/>
