@@ -1,137 +1,277 @@
 msgid ""
 msgstr "Content-Type: text/plain; charset=utf-8\n"
 
-msgctxt "field:sale.async_payment,amount:"
-msgid "Amount"
-msgstr "Monto"
+msgctxt "field:res.user,async_payment_filters:"
+msgid "Async Payment Filters"
+msgstr "Filtros de cobros asíncronos"
+
+msgctxt "field:sale.async.confirm.form,amount:"
+msgid "Registered Amount"
+msgstr "Monto registrado"
+
+msgctxt "field:sale.async.confirm.form,message:"
+msgid "Message"
+msgstr "Mensaje"
+
+msgctxt "field:sale.async.confirm.form,payment_method_label:"
+msgid "Method"
+msgstr "Método"
+
+msgctxt "field:sale.async.confirm.form,payment_url:"
+msgid "Payment URL"
+msgstr "URL de pago"
+
+msgctxt "field:sale.async.method.select.form,journal:"
+msgid "Journal"
+msgstr "Diario"
+
+msgctxt "field:sale.async.method.select.form,notes:"
+msgid "Notes"
+msgstr "Notas"
 
 msgctxt "field:sale.async.method.select.form,payment_amount:"
 msgid "Amount"
 msgstr "Monto"
 
-msgctxt "field:sale.unassigned_payment,amount:"
+msgctxt "field:sale.async.method.select.form,payment_method:"
+msgid "Method"
+msgstr "Método"
+
+msgctxt "field:sale.async.method.select.form,payment_method_readonly:"
+msgid "Method Fixed"
+msgstr "Método fijo"
+
+msgctxt "field:sale.async_payment,amount:"
 msgid "Amount"
 msgstr "Monto"
-
-msgctxt "field:sale.async_payment.config.line,payment_method:"
-msgid "Async Method"
-msgstr "Método async"
-
-msgctxt "field:sale.payment.form,has_async_options:"
-msgid "Async Options Available"
-msgstr "Opciones asíncronas disponibles"
-
-msgctxt "model:sale.async_payment,name:"
-msgid "Async Payment"
-msgstr "Cobro asíncrono"
-
-msgctxt "wizard_button:sale.payment,start,async_method_select:"
-msgid "Async Payment"
-msgstr "Cobro asíncrono"
-
-msgctxt "model:sale.async_payment.config,name:"
-msgid "Async Payment Configuration"
-msgstr "Configuración de cobros asíncronos"
-
-msgctxt "field:res.user,async_payment_filters:"
-msgid "Async Payment Filters"
-msgstr "Filtros de cobros asíncronos"
-
-msgctxt "model:sale.async.method.select.form,name:"
-msgid "Async Payment Method Selection"
-msgstr "Selección de método de cobro asíncrono"
-
-msgctxt "model:sale.async.confirm.form,name:"
-msgid "Async Payment Registration Result"
-msgstr "Resultado del registro de cobro asíncrono"
-
-msgctxt "field:sale.sale,async_payments:"
-msgid "Async Payments"
-msgstr "Cobros asíncronos"
-
-msgctxt "help:sale.async.method.select.form,payment_method:"
-msgid "Async payment method. Available options depend on the journal."
-msgstr "Método de cobro asíncrono. Las opciones disponibles dependen del diario."
-
-msgctxt "help:sale.async_payment.config.line,payment_method:"
-msgid "Async payment type enabled for this journal. Available options depend on the journal's payment method."
-msgstr "Tipo de cobro asíncrono habilitado para este diario. Las opciones dependen del método de pago del diario."
-
-msgctxt "wizard_button:sale.payment,async_method_select,start:"
-msgid "Back"
-msgstr "Volver"
 
 msgctxt "field:sale.async_payment,bank_reference:"
 msgid "Bank Reference"
 msgstr "Referencia bancaria"
 
-msgctxt "selection:sale.async_payment,match_criteria:"
-msgid "Bank Reference"
-msgstr "Referencia bancaria"
-
-msgctxt "selection:sale.async_payment,payment_method:"
-msgid "Bank Transfer"
-msgstr "Transferencia bancaria"
-
-msgctxt "wizard_button:sale.unassigned_payment.link,start,end:"
-msgid "Cancel"
-msgstr "Cancelar"
-
-msgctxt "selection:sale.async_payment,state:"
-msgid "Cancelled"
-msgstr "Cancelado"
-
-msgctxt "wizard_button:sale.payment,async_confirm,end:"
-msgid "Close"
-msgstr "Cerrar"
-
 msgctxt "field:sale.async_payment,company:"
 msgid "Company"
 msgstr "Empresa"
-
-msgctxt "field:sale.async_payment.user_filter,company:"
-msgid "Company"
-msgstr "Empresa"
-
-msgctxt "field:sale.async_payment.config.line,config:"
-msgid "Configuration"
-msgstr "Configuración"
-
-msgctxt "help:res.user,async_payment_filters:"
-msgid "Configures which async payments this user sees in the Pending Payments view."
-msgstr "Configura qué cobros asíncronos ve este usuario en la vista Cobros pendientes."
-
-msgctxt "field:sale.async_payment,confirmed_date:"
-msgid "Confirmation Date"
-msgstr "Fecha de confirmación"
-
-msgctxt "selection:sale.async_payment,state:"
-msgid "Confirmed"
-msgstr "Confirmado"
 
 msgctxt "field:sale.async_payment,confirmed_by:"
 msgid "Confirmed By"
 msgstr "Confirmado por"
 
-msgctxt "field:sale.unassigned_payment,date:"
-msgid "Date"
-msgstr "Fecha"
+msgctxt "field:sale.async_payment,confirmed_date:"
+msgid "Confirmation Date"
+msgstr "Fecha de confirmación"
 
-msgctxt "selection:sale.async_payment.config,default_expiration_unit:"
-msgid "Days"
-msgstr "Días"
+msgctxt "field:sale.async_payment,expiration_date:"
+msgid "Expiration Date"
+msgstr "Fecha de vencimiento"
 
-msgctxt "selection:sale.async_payment.config.line,expiration_unit:"
-msgid "Days"
-msgstr "Días"
+msgctxt "field:sale.async_payment,expiration_date_date:"
+msgid "Expires"
+msgstr "Vence"
+
+msgctxt "field:sale.async_payment,journal:"
+msgid "Statement Journal"
+msgstr "Diario de extracto"
+
+msgctxt "field:sale.async_payment,match_criteria:"
+msgid "Match Criteria"
+msgstr "Criterio de coincidencia"
+
+msgctxt "field:sale.async_payment,matched_date:"
+msgid "Match Date"
+msgstr "Fecha de coincidencia"
+
+msgctxt "field:sale.async_payment,mp_payment_id:"
+msgid "MP Payment ID"
+msgstr "ID de pago MP"
+
+msgctxt "field:sale.async_payment,mp_transaction:"
+msgid "MP Transaction"
+msgstr "Transacción MP"
+
+msgctxt "field:sale.async_payment,notes:"
+msgid "Notes"
+msgstr "Notas"
+
+msgctxt "field:sale.async_payment,payer_cuit:"
+msgid "Payer Tax ID"
+msgstr "CUIT del pagador"
+
+msgctxt "field:sale.async_payment,payer_name:"
+msgid "Payer Name"
+msgstr "Nombre del pagador"
+
+msgctxt "field:sale.async_payment,payment_method:"
+msgid "Payment Method"
+msgstr "Método de pago"
+
+msgctxt "field:sale.async_payment,qr_detection:"
+msgid "QR Detection"
+msgstr "Detección QR"
+
+msgctxt "field:sale.async_payment,received_amount:"
+msgid "Received Amount"
+msgstr "Monto recibido"
+
+msgctxt "field:sale.async_payment,sale:"
+msgid "Sale"
+msgstr "Venta"
+
+msgctxt "field:sale.async_payment,shop:"
+msgid "Shop"
+msgstr "Sucursal"
+
+msgctxt "field:sale.async_payment,state:"
+msgid "State"
+msgstr "Estado"
+
+msgctxt "field:sale.async_payment,statement_line:"
+msgid "Statement Line"
+msgstr "Línea de extracto"
+
+msgctxt "field:sale.async_payment.config,default_expiration_unit:"
+msgid "Default Unit"
+msgstr "Unidad por defecto"
 
 msgctxt "field:sale.async_payment.config,default_expiration_value:"
 msgid "Default Expiration"
 msgstr "Vencimiento por defecto"
 
-msgctxt "field:sale.async_payment.config,default_expiration_unit:"
-msgid "Default Unit"
-msgstr "Unidad por defecto"
+msgctxt "field:sale.async_payment.config,lines:"
+msgid "Expiration per Journal"
+msgstr "Vencimiento por diario"
+
+msgctxt "field:sale.async_payment.config.line,config:"
+msgid "Configuration"
+msgstr "Configuración"
+
+msgctxt "field:sale.async_payment.config.line,expiration_unit:"
+msgid "Unit"
+msgstr "Unidad"
+
+msgctxt "field:sale.async_payment.config.line,expiration_value:"
+msgid "Value"
+msgstr "Valor"
+
+msgctxt "field:sale.async_payment.config.line,journal:"
+msgid "Journal"
+msgstr "Diario"
+
+msgctxt "field:sale.async_payment.config.line,journal_payment_method:"
+msgid "Journal Method"
+msgstr "Método del diario"
+
+msgctxt "field:sale.async_payment.config.line,payment_method:"
+msgid "Async Method"
+msgstr "Método async"
+
+msgctxt "field:sale.async_payment.user_filter,company:"
+msgid "Company"
+msgstr "Empresa"
+
+msgctxt "field:sale.async_payment.user_filter,only_own:"
+msgid "Only My Payments"
+msgstr "Solo mis cobros"
+
+msgctxt "field:sale.async_payment.user_filter,shops:"
+msgid "Visible Shops"
+msgstr "Sucursales visibles"
+
+msgctxt "field:sale.async_payment.user_filter,user:"
+msgid "User"
+msgstr "Usuario"
+
+msgctxt "field:sale.async_payment.user_filter-sale.shop,shop:"
+msgid "Shop"
+msgstr "Sucursal"
+
+msgctxt "field:sale.async_payment.user_filter-sale.shop,user_filter:"
+msgid "Filter"
+msgstr "Filtro"
+
+msgctxt "field:sale.payment.form,has_async_options:"
+msgid "Async Options Available"
+msgstr "Opciones asíncronas disponibles"
+
+msgctxt "field:sale.sale,async_payments:"
+msgid "Async Payments"
+msgstr "Cobros asíncronos"
+
+msgctxt "field:sale.sale,async_pending_amount:"
+msgid "Pending Async"
+msgstr "Pendiente asíncrono"
+
+msgctxt "field:sale.sale,effective_residual_amount:"
+msgid "Effective Residual"
+msgstr "Residual efectivo"
+
+msgctxt "field:sale.unassigned_payment,amount:"
+msgid "Amount"
+msgstr "Monto"
+
+msgctxt "field:sale.unassigned_payment,date:"
+msgid "Date"
+msgstr "Fecha"
+
+msgctxt "field:sale.unassigned_payment,payer_cuit:"
+msgid "Payer Tax ID"
+msgstr "CUIT del pagador"
+
+msgctxt "field:sale.unassigned_payment,payer_name:"
+msgid "Payer"
+msgstr "Pagador"
+
+msgctxt "field:sale.unassigned_payment,reference:"
+msgid "Reference"
+msgstr "Referencia"
+
+msgctxt "field:sale.unassigned_payment,source:"
+msgid "Source"
+msgstr "Origen"
+
+msgctxt "field:sale.unassigned_payment,source_id:"
+msgid "Source ID"
+msgstr "ID en origen"
+
+msgctxt "field:sale.unassigned_payment,statement_line:"
+msgid "Statement Line"
+msgstr "Línea de extracto"
+
+msgctxt "field:sale.unassigned_payment.link.form,payer_name:"
+msgid "Payer"
+msgstr "Pagador"
+
+msgctxt "field:sale.unassigned_payment.link.form,payment_amount:"
+msgid "Payment Amount"
+msgstr "Monto del pago"
+
+msgctxt "field:sale.unassigned_payment.link.form,payment_reference:"
+msgid "Reference"
+msgstr "Referencia"
+
+msgctxt "field:sale.unassigned_payment.link.form,payment_source:"
+msgid "Source"
+msgstr "Origen"
+
+msgctxt "field:sale.unassigned_payment.link.form,sale:"
+msgid "Sale"
+msgstr "Venta"
+
+msgctxt "help:res.user,async_payment_filters:"
+msgid "Configures which async payments this user sees in the Pending Payments view."
+msgstr "Configura qué cobros asíncronos ve este usuario en la vista Cobros pendientes."
+
+msgctxt "help:sale.async.confirm.form,payment_url:"
+msgid "Share this link with the customer."
+msgstr "Compartí este link con el cliente."
+
+msgctxt "help:sale.async.method.select.form,journal:"
+msgid "Journal used for the async payment (from the payment wizard)."
+msgstr "Diario del cobro asíncrono (viene del wizard de pago)."
+
+msgctxt "help:sale.async.method.select.form,payment_method:"
+msgid "Async payment method. Available options depend on the journal."
+msgstr "Método de cobro asíncrono. Las opciones disponibles dependen del diario."
 
 msgctxt "help:sale.async_payment.config,default_expiration_unit:"
 msgid "Default expiration unit: Hours or Days."
@@ -145,305 +285,57 @@ msgctxt "help:sale.async_payment.config,lines:"
 msgid "Each journal enabled for async payments must be listed here. Lines without an expiration value fall back to the default."
 msgstr "Cada diario habilitado para cobros asíncronos debe figurar acá. Las líneas sin valor de vencimiento usan el default."
 
-msgctxt "field:sale.sale,effective_residual_amount:"
-msgid "Effective Residual"
-msgstr "Residual efectivo"
-
-msgctxt "help:sale.async_payment.user_filter,shops:"
-msgid "Empty means all shops."
-msgstr "Vacío significa todas las sucursales."
-
-msgctxt "model:sale.async_payment.config.line,name:"
-msgid "Enabled Async Payment Method"
-msgstr "Método de cobro asíncrono habilitado"
-
-msgctxt "selection:sale.async_payment,match_criteria:"
-msgid "Exact Amount"
-msgstr "Monto exacto"
-
-msgctxt "field:sale.async_payment,expiration_date:"
-msgid "Expiration Date"
-msgstr "Fecha de vencimiento"
-
-msgctxt "field:sale.async_payment.config,lines:"
-msgid "Expiration per Journal"
-msgstr "Vencimiento por diario"
-
-msgctxt "selection:ir.cron,method:"
-msgid "Expire Pending Async Payments"
-msgstr "Vencer cobros asíncronos pendientes"
-
-msgctxt "selection:sale.async_payment,state:"
-msgid "Expired"
-msgstr "Vencido"
-
-msgctxt "field:sale.async_payment,expiration_date_date:"
-msgid "Expires"
-msgstr "Vence"
-
-msgctxt "field:sale.async_payment.user_filter-sale.shop,user_filter:"
-msgid "Filter"
-msgstr "Filtro"
-
-msgctxt "selection:sale.async_payment.config,default_expiration_unit:"
-msgid "Hours"
-msgstr "Horas"
-
-msgctxt "selection:sale.async_payment.config.line,expiration_unit:"
-msgid "Hours"
-msgstr "Horas"
+msgctxt "help:sale.async_payment.config.line,expiration_unit:"
+msgid "Hours or days. If empty, the default unit is used."
+msgstr "Horas o días. Si está vacío, usa la unidad por defecto."
 
 msgctxt "help:sale.async_payment.config.line,expiration_value:"
 msgid "Hours or days until the payment expires. If empty, the configuration default is used."
 msgstr "Horas o días hasta que vence el cobro. Si está vacío, usa el valor por defecto de la configuración."
 
-msgctxt "help:sale.async_payment.config.line,expiration_unit:"
-msgid "Hours or days. If empty, the default unit is used."
-msgstr "Horas o días. Si está vacío, usa la unidad por defecto."
+msgctxt "help:sale.async_payment.config.line,journal:"
+msgid "Statement journal enabled for async payments. Only journals whose payment method supports the async flow are listed."
+msgstr "Diario de extracto habilitado para cobros asíncronos. Solo se listan diarios cuyo método de pago admite el flujo asíncrono."
+
+msgctxt "help:sale.async_payment.config.line,payment_method:"
+msgid "Async payment type enabled for this journal. Available options depend on the journal's payment method."
+msgstr "Tipo de cobro asíncrono habilitado para este diario. Las opciones dependen del método de pago del diario."
 
 msgctxt "help:sale.async_payment.user_filter,only_own:"
 msgid "If active, shows only payments registered by this user."
 msgstr "Si está activo, solo muestra cobros registrados por este usuario."
 
-msgctxt "field:sale.async_payment.config.line,journal:"
-msgid "Journal"
-msgstr "Diario"
-
-msgctxt "field:sale.async.method.select.form,journal:"
-msgid "Journal"
-msgstr "Diario"
-
-msgctxt "field:sale.async_payment.config.line,journal_payment_method:"
-msgid "Journal Method"
-msgstr "Método del diario"
-
-msgctxt "help:sale.async.method.select.form,journal:"
-msgid "Journal used for the async payment (from the payment wizard)."
-msgstr "Diario del cobro asíncrono (viene del wizard de pago)."
-
-msgctxt "wizard_button:sale.unassigned_payment.link,start,link_:"
-msgid "Link"
-msgstr "Vincular"
-
-msgctxt "model:sale.unassigned_payment.link.form,name:"
-msgid "Link Unassigned Payment to Sale"
-msgstr "Vincular pago no asignado a venta"
-
-msgctxt "selection:sale.async_payment,match_criteria:"
-msgid "MP Payment ID"
-msgstr "ID de pago MP"
-
-msgctxt "field:sale.async_payment,mp_payment_id:"
-msgid "MP Payment ID"
-msgstr "ID de pago MP"
-
-msgctxt "field:sale.async_payment,mp_transaction:"
-msgid "MP Transaction"
-msgstr "Transacción MP"
-
-msgctxt "selection:sale.async_payment,match_criteria:"
-msgid "Manual Link"
-msgstr "Vinculación manual"
-
-msgctxt "field:sale.async_payment,match_criteria:"
-msgid "Match Criteria"
-msgstr "Criterio de coincidencia"
-
-msgctxt "field:sale.async_payment,matched_date:"
-msgid "Match Date"
-msgstr "Fecha de coincidencia"
-
-msgctxt "selection:sale.unassigned_payment,source:"
-msgid "Mercado Pago"
-msgstr "Mercado Pago"
-
-msgctxt "selection:sale.async_payment,payment_method:"
-msgid "Mercado Pago Link"
-msgstr "Link de Mercado Pago"
-
-msgctxt "selection:sale.async_payment,payment_method:"
-msgid "Mercado Pago Static QR"
-msgstr "QR estático Mercado Pago"
-
-msgctxt "field:sale.async.confirm.form,message:"
-msgid "Message"
-msgstr "Mensaje"
-
-msgctxt "field:sale.async.method.select.form,payment_method:"
-msgid "Method"
-msgstr "Método"
-
-msgctxt "field:sale.async.confirm.form,payment_method_label:"
-msgid "Method"
-msgstr "Método"
-
-msgctxt "field:sale.async.method.select.form,payment_method_readonly:"
-msgid "Method Fixed"
-msgstr "Método fijo"
-
-msgctxt "field:sale.async_payment,notes:"
-msgid "Notes"
-msgstr "Notas"
-
-msgctxt "field:sale.async.method.select.form,notes:"
-msgid "Notes"
-msgstr "Notas"
-
-msgctxt "field:sale.async_payment.user_filter,only_own:"
-msgid "Only My Payments"
-msgstr "Solo mis cobros"
-
-msgctxt "selection:sale.async_payment,payment_method:"
-msgid "Other"
-msgstr "Otro"
-
-msgctxt "field:sale.unassigned_payment,payer_name:"
-msgid "Payer"
-msgstr "Pagador"
-
-msgctxt "field:sale.unassigned_payment.link.form,payer_name:"
-msgid "Payer"
-msgstr "Pagador"
-
-msgctxt "field:sale.async_payment,payer_name:"
-msgid "Payer Name"
-msgstr "Nombre del pagador"
-
-msgctxt "selection:sale.async_payment,match_criteria:"
-msgid "Payer Tax ID"
-msgstr "CUIT del pagador"
-
-msgctxt "field:sale.async_payment,payer_cuit:"
-msgid "Payer Tax ID"
-msgstr "CUIT del pagador"
-
-msgctxt "field:sale.unassigned_payment,payer_cuit:"
-msgid "Payer Tax ID"
-msgstr "CUIT del pagador"
-
-msgctxt "field:sale.unassigned_payment.link.form,payment_amount:"
-msgid "Payment Amount"
-msgstr "Monto del pago"
-
-msgctxt "field:sale.async_payment,payment_method:"
-msgid "Payment Method"
-msgstr "Método de pago"
-
-msgctxt "field:sale.async.confirm.form,payment_url:"
-msgid "Payment URL"
-msgstr "URL de pago"
-
-msgctxt "selection:sale.async_payment,state:"
-msgid "Pending"
-msgstr "Pendiente"
-
-msgctxt "field:sale.sale,async_pending_amount:"
-msgid "Pending Async"
-msgstr "Pendiente asíncrono"
-
-msgctxt "selection:sale.unassigned_payment,source:"
-msgid "QR / Transfer"
-msgstr "QR / Transferencia"
-
-msgctxt "field:sale.async_payment,qr_detection:"
-msgid "QR Detection"
-msgstr "Detección QR"
-
-msgctxt "field:sale.async_payment,received_amount:"
-msgid "Received Amount"
-msgstr "Monto recibido"
-
-msgctxt "field:sale.unassigned_payment,reference:"
-msgid "Reference"
-msgstr "Referencia"
-
-msgctxt "field:sale.unassigned_payment.link.form,payment_reference:"
-msgid "Reference"
-msgstr "Referencia"
-
-msgctxt "wizard_button:sale.payment,async_method_select,async_register:"
-msgid "Register"
-msgstr "Registrar"
-
-msgctxt "field:sale.async.confirm.form,amount:"
-msgid "Registered Amount"
-msgstr "Monto registrado"
-
-msgctxt "field:sale.async_payment,sale:"
-msgid "Sale"
-msgstr "Venta"
-
-msgctxt "field:sale.unassigned_payment.link.form,sale:"
-msgid "Sale"
-msgstr "Venta"
-
-msgctxt "help:sale.sale,effective_residual_amount:"
-msgid "Sale total minus confirmed payments minus pending async payments."
-msgstr "Total de la venta menos cobros confirmados menos cobros asíncronos pendientes."
-
-msgctxt "help:sale.async.confirm.form,payment_url:"
-msgid "Share this link with the customer."
-msgstr "Compartí este link con el cliente."
-
-msgctxt "field:sale.async_payment,shop:"
-msgid "Shop"
-msgstr "Sucursal"
-
-msgctxt "field:sale.async_payment.user_filter-sale.shop,shop:"
-msgid "Shop"
-msgstr "Sucursal"
-
-msgctxt "field:sale.unassigned_payment,source:"
-msgid "Source"
-msgstr "Origen"
-
-msgctxt "field:sale.unassigned_payment.link.form,payment_source:"
-msgid "Source"
-msgstr "Origen"
-
-msgctxt "field:sale.unassigned_payment,source_id:"
-msgid "Source ID"
-msgstr "ID en origen"
-
-msgctxt "field:sale.async_payment,state:"
-msgid "State"
-msgstr "Estado"
-
-msgctxt "field:sale.async_payment,journal:"
-msgid "Statement Journal"
-msgstr "Diario de extracto"
-
-msgctxt "field:sale.async_payment,statement_line:"
-msgid "Statement Line"
-msgstr "Línea de extracto"
-
-msgctxt "field:sale.unassigned_payment,statement_line:"
-msgid "Statement Line"
-msgstr "Línea de extracto"
-
-msgctxt "help:sale.async_payment.config.line,journal:"
-msgid "Statement journal enabled for async payments. Only journals whose payment method supports the async flow are listed."
-msgstr "Diario de extracto habilitado para cobros asíncronos. Solo se listan diarios cuyo método de pago admite el flujo asíncrono."
-
-msgctxt "selection:sale.async_payment,state:"
-msgid "Suggested"
-msgstr "Sugerido"
+msgctxt "help:sale.async_payment.user_filter,shops:"
+msgid "Empty means all shops."
+msgstr "Vacío significa todas las sucursales."
 
 msgctxt "help:sale.sale,async_pending_amount:"
 msgid "Sum of async payments in Pending or Suggested state."
 msgstr "Suma de cobros asíncronos en estado Pendiente o Sugerido."
 
-msgctxt "model:sale.unassigned_payment,name:"
-msgid "Unassigned Payment"
-msgstr "Pago no asignado"
+msgctxt "help:sale.sale,effective_residual_amount:"
+msgid "Sale total minus confirmed payments minus pending async payments."
+msgstr "Total de la venta menos cobros confirmados menos cobros asíncronos pendientes."
 
-msgctxt "field:sale.async_payment.config.line,expiration_unit:"
-msgid "Unit"
-msgstr "Unidad"
+msgctxt "model:sale.async.confirm.form,name:"
+msgid "Async Payment Registration Result"
+msgstr "Resultado del registro de cobro asíncrono"
 
-msgctxt "field:sale.async_payment.user_filter,user:"
-msgid "User"
-msgstr "Usuario"
+msgctxt "model:sale.async.method.select.form,name:"
+msgid "Async Payment Method Selection"
+msgstr "Selección de método de cobro asíncrono"
+
+msgctxt "model:sale.async_payment,name:"
+msgid "Async Payment"
+msgstr "Cobro asíncrono"
+
+msgctxt "model:sale.async_payment.config,name:"
+msgid "Async Payment Configuration"
+msgstr "Configuración de cobros asíncronos"
+
+msgctxt "model:sale.async_payment.config.line,name:"
+msgid "Enabled Async Payment Method"
+msgstr "Método de cobro asíncrono habilitado"
 
 msgctxt "model:sale.async_payment.user_filter,name:"
 msgid "User Filter for Async Payments"
@@ -453,10 +345,118 @@ msgctxt "model:sale.async_payment.user_filter-sale.shop,name:"
 msgid "User Filter — Shops"
 msgstr "Filtro de usuario — Sucursales"
 
-msgctxt "field:sale.async_payment.config.line,expiration_value:"
-msgid "Value"
-msgstr "Valor"
+msgctxt "model:sale.unassigned_payment,name:"
+msgid "Unassigned Payment"
+msgstr "Pago no asignado"
 
-msgctxt "field:sale.async_payment.user_filter,shops:"
-msgid "Visible Shops"
-msgstr "Sucursales visibles"
+msgctxt "model:sale.unassigned_payment.link.form,name:"
+msgid "Link Unassigned Payment to Sale"
+msgstr "Vincular pago no asignado a venta"
+
+msgctxt "selection:ir.cron,method:"
+msgid "Expire Pending Async Payments"
+msgstr "Vencer cobros asíncronos pendientes"
+
+msgctxt "selection:sale.async_payment,match_criteria:"
+msgid "Bank Reference"
+msgstr "Referencia bancaria"
+
+msgctxt "selection:sale.async_payment,match_criteria:"
+msgid "Exact Amount"
+msgstr "Monto exacto"
+
+msgctxt "selection:sale.async_payment,match_criteria:"
+msgid "MP Payment ID"
+msgstr "ID de pago MP"
+
+msgctxt "selection:sale.async_payment,match_criteria:"
+msgid "Manual Link"
+msgstr "Vinculación manual"
+
+msgctxt "selection:sale.async_payment,match_criteria:"
+msgid "Payer Tax ID"
+msgstr "CUIT del pagador"
+
+msgctxt "selection:sale.async_payment,payment_method:"
+msgid "Bank Transfer"
+msgstr "Transferencia bancaria"
+
+msgctxt "selection:sale.async_payment,payment_method:"
+msgid "Mercado Pago Link"
+msgstr "Link de Mercado Pago"
+
+msgctxt "selection:sale.async_payment,payment_method:"
+msgid "Mercado Pago Static QR"
+msgstr "QR estático Mercado Pago"
+
+msgctxt "selection:sale.async_payment,payment_method:"
+msgid "Other"
+msgstr "Otro"
+
+msgctxt "selection:sale.async_payment,state:"
+msgid "Cancelled"
+msgstr "Cancelado"
+
+msgctxt "selection:sale.async_payment,state:"
+msgid "Confirmed"
+msgstr "Confirmado"
+
+msgctxt "selection:sale.async_payment,state:"
+msgid "Expired"
+msgstr "Vencido"
+
+msgctxt "selection:sale.async_payment,state:"
+msgid "Pending"
+msgstr "Pendiente"
+
+msgctxt "selection:sale.async_payment,state:"
+msgid "Suggested"
+msgstr "Sugerido"
+
+msgctxt "selection:sale.async_payment.config,default_expiration_unit:"
+msgid "Days"
+msgstr "Días"
+
+msgctxt "selection:sale.async_payment.config,default_expiration_unit:"
+msgid "Hours"
+msgstr "Horas"
+
+msgctxt "selection:sale.async_payment.config.line,expiration_unit:"
+msgid "Days"
+msgstr "Días"
+
+msgctxt "selection:sale.async_payment.config.line,expiration_unit:"
+msgid "Hours"
+msgstr "Horas"
+
+msgctxt "selection:sale.unassigned_payment,source:"
+msgid "Mercado Pago"
+msgstr "Mercado Pago"
+
+msgctxt "selection:sale.unassigned_payment,source:"
+msgid "QR / Transfer"
+msgstr "QR / Transferencia"
+
+msgctxt "wizard_button:sale.payment,async_confirm,end:"
+msgid "Close"
+msgstr "Cerrar"
+
+msgctxt "wizard_button:sale.payment,async_method_select,async_register:"
+msgid "Register"
+msgstr "Registrar"
+
+msgctxt "wizard_button:sale.payment,async_method_select,start:"
+msgid "Back"
+msgstr "Volver"
+
+msgctxt "wizard_button:sale.payment,start,async_method_select:"
+msgid "Async Payment"
+msgstr "Cobro asíncrono"
+
+msgctxt "wizard_button:sale.unassigned_payment.link,start,end:"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "wizard_button:sale.unassigned_payment.link,start,link_:"
+msgid "Link"
+msgstr "Vincular"
