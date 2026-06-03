@@ -81,7 +81,7 @@
             name="Pending Payments"
             parent="account_payment_qr.menu_cobros_qr"
             action="act_async_payment"
-            icon="tryton-payment"
+            icon="tryton-list"
             sequence="10"/>
     </data>
 </tryton>

@@ -83,7 +83,7 @@
             name="Unassigned Payments"
             parent="account_payment_qr.menu_cobros_qr"
             action="act_unassigned_payment"
-            icon="tryton-warning"
+            icon="tryton-list"
             sequence="20"/>
     </data>
 </tryton>
