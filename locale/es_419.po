@@ -460,3 +460,27 @@ msgstr "Cancelar"
 msgctxt "wizard_button:sale.unassigned_payment.link,start,link_:"
 msgid "Link"
 msgstr "Vincular"
+
+msgctxt "model:ir.ui.menu,name:menu_async_payment"
+msgid "Pending Payments"
+msgstr "Cobros pendientes"
+
+msgctxt "model:ir.action,name:act_async_payment"
+msgid "Pending Payments"
+msgstr "Cobros pendientes"
+
+msgctxt "model:ir.ui.menu,name:menu_async_payment_config"
+msgid "Async Payments"
+msgstr "Cobros asíncronos"
+
+msgctxt "model:ir.ui.menu,name:menu_unassigned_payment"
+msgid "Unassigned Payments"
+msgstr "Pagos no asignados"
+
+msgctxt "model:ir.action,name:act_unassigned_payment"
+msgid "Unassigned Payments"
+msgstr "Pagos no asignados"
+
+msgctxt "model:ir.action,name:wizard_link_unassigned"
+msgid "Link Unassigned Payment"
+msgstr "Vincular pago no asignado"
